@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ErrorInsight • Intelligent Error Analyzer</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="bg-orb orb1"></div><div class="bg-orb orb2"></div>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-mark">EI</div>
+    <div><b>ErrorInsight</b><span>INTELLIGENT ANALYZER</span></div>
+  </div>
+  <div class="nav-title">WORKSPACE</div>
+  <nav>
+    <a class="active" href="#"><i>⌂</i> Dashboard</a>
+    <a href="#recurring"><i>↻</i> Recurring Errors</a>
+    <a href="#recent"><i>☷</i> Error Logs</a>
+    <a href="#recommendations"><i>✦</i> Recommendations</a>
+  </nav>
+  <div class="side-card">
+    <div class="pulse"></div><div><b>Analyzer Online</b><small>Local Flask server</small></div>
+  </div>
+  <div class="tech"><span>PYTHON</span><span>FLASK</span><span>JSON</span></div>
+</aside>
+
+<main>
+<header class="topbar">
+  <div>
+    <div class="eyebrow">SMART LOG ANALYTICS</div>
+    <h1>Error <span>Insight</span></h1>
+    <p>Analyze errors. Find patterns. Fix problems faster.</p>
+  </div>
+  <div class="actions">
+    <label class="upload"><input id="file" type="file" accept=".json">＋ Upload errors.json</label>
+    <button id="demo">Load Demo</button>
+  </div>
+</header>
+<div id="msg" class="msg hidden"></div>
+
+<section class="hero">
+  <div><div class="hero-kicker">LIVE ANALYSIS</div>
+  <h2>Your system health, at a glance.</h2>
+  <p>ErrorInsight transforms raw parser output into readable trends, severity levels and actionable recommendations.</p></div>
+  <div class="hero-badge"><strong id="health">READY</strong><small>ANALYZER STATUS</small></div>
+</section>
+
+<section class="stats">
+  <article class="stat total"><div class="icon">◈</div><small>TOTAL ERRORS</small><strong id="total">—</strong><p>All extracted errors</p></article>
+  <article class="stat types"><div class="icon">⌘</div><small>ERROR TYPES</small><strong id="types">—</strong><p>Unique categories</p></article>
+  <article class="stat critical"><div class="icon">!</div><small>CRITICAL</small><strong id="critical">—</strong><p>Immediate attention</p></article>
+  <article class="stat warning"><div class="icon">⚠</div><small>WARNINGS</small><strong id="warning">—</strong><p>Potential issues</p></article>
+</section>
+
+<section class="two">
+  <div class="panel">
+    <div class="panel-head"><div><h3>Error Type Analysis</h3><p>Which problems occur most often?</p></div><span class="mini-tag">FREQUENCY</span></div>
+    <div id="bars"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><div><h3>Severity Distribution</h3><p>Impact across all detected errors</p></div><span class="mini-tag">IMPACT</span></div>
+    <div class="donut-area"><div id="donut" class="donut"><div><b id="donutTotal">0</b><small>ERRORS</small></div></div><div id="legend" class="legend"></div></div>
+  </div>
+</section>
+
+<section id="recurring" class="panel">
+ <div class="panel-head"><div><h3>Top Recurring Errors</h3><p>Prioritize categories with the highest frequency</p></div><span class="mini-tag purple">TOP ISSUES</span></div>
+ <div id="recurringList" class="cards"></div>
+</section>
+
+<section id="recommendations" class="panel">
+ <div class="panel-head"><div><h3>Smart Recommendations</h3><p>Possible causes and recommended fixes</p></div><span class="mini-tag green">ACTIONABLE</span></div>
+ <div id="recommendationsList" class="recommendations"></div>
+</section>
+
+<section id="recent" class="panel">
+ <div class="panel-head"><div><h3>Recent Error Logs</h3><p>Latest records from the analyzed JSON</p></div></div>
+ <div class="table-wrap"><table><thead><tr><th>TIME</th><th>TYPE</th><th>ERROR MESSAGE</th><th>SEVERITY</th></tr></thead><tbody id="recentBody"></tbody></table></div>
+</section>
+
+<footer><span>● ErrorInsight is running locally</span><span>Python + Flask • errors.json • /api/analyze</span></footer>
+</main>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body></html>
