@@ -1,25 +1,31 @@
 """
-REST API routes for ErrorInsight.
+REST API routes for LogHealth.
 Implements all required endpoints with validation, API-key authentication,
 database persistence, and standardized JSON responses.
 """
 
+from datetime import datetime
 from functools import wraps
 import json
 import logging
 from typing import Any, Callable, Dict, Tuple
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify, request, Response
 
 from config import get_config
 from database.db import DatabaseError, get_db
-from services.analytics_service import analyze_records_in_memory, compute_database_analytics
+from services.analytics_service import (
+    analyze_records_in_memory,
+    compute_database_analytics,
+    generate_health_report
+)
 from services.parser_service import ParseError, parse_json_data, parse_upload_payload
 from services.recommendation_service import get_recommendation_for_error
 
 logger = logging.getLogger(__name__)
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
+
 
 
 def require_api_key(f: Callable) -> Callable:
@@ -62,19 +68,20 @@ def health_check() -> Tuple[Any, int]:
     if not health.get("connected"):
         return jsonify({
             "status": "error",
-            "service": "ErrorInsight API",
+            "service": "LogHealth API",
             "database": "disconnected",
             "details": health.get("error", "Database unavailable")
         }), 503
 
     return jsonify({
         "status": "healthy",
-        "service": "ErrorInsight – Intelligent Error Analyzer",
+        "service": "LogHealth – Log Analytics and System Health Intelligence",
         "database": health.get("engine", "SQLite"),
         "database_file": health.get("database_file"),
         "stored_record_count": health.get("record_count", 0),
         "version": "1.0.0"
     }), 200
+
 
 
 @api_bp.route("/logs", methods=["POST"])
@@ -182,13 +189,21 @@ def analyze_logs() -> Tuple[Any, int]:
                 "error": "No valid error records could be parsed from input."
             }), 400
 
-        # Calculate metrics immediately for the parsed records
-        analysis_result = analyze_records_in_memory(records)
+        # Query baseline from database before inserting to compute historical delta
+        db = get_db()
+        historical_records = []
+        try:
+            historical_records = db.get_all_records(limit=2000)
+        except Exception:
+            pass
+
+        # Calculate metrics immediately for the parsed records, including historical comparison
+        analysis_result = analyze_records_in_memory(records, historical_records=historical_records)
 
         # Persist to database
-        db = get_db()
         save_stats = {"accepted": 0, "duplicates": 0, "rejected": 0, "errors": []}
         db_warning = None
+
 
         try:
             save_stats = db.insert_records(records)
@@ -330,9 +345,9 @@ def get_api_docs() -> Tuple[Any, int]:
     """
     cfg = get_config()
     return jsonify({
-        "title": "ErrorInsight REST API Documentation",
+        "title": "LogHealth REST API Documentation",
         "version": "1.0.0",
-        "description": "Integration API for Log Parsers and System Monitoring clients.",
+        "description": "Log Analytics and System Health Intelligence Platform API.",
         "authentication": {
             "type": "API Key",
             "header": "X-API-Key",
@@ -351,7 +366,7 @@ def get_api_docs() -> Tuple[Any, int]:
             {
                 "path": "/api/logs",
                 "method": "POST",
-                "description": "Primary integration endpoint for friend's Log Parser. Ingests normalized error records.",
+                "description": "Primary integration endpoint for external Log Parsers. Ingests normalized error records.",
                 "auth_required": True,
                 "headers": {"X-API-Key": "<key>", "Content-Type": "application/json"},
                 "accepted_formats": ["Format A (Object with 'errors' array)", "Format B (Array of error objects)"],
@@ -360,7 +375,7 @@ def get_api_docs() -> Tuple[Any, int]:
             {
                 "path": "/api/analyze",
                 "method": "POST",
-                "description": "Upload a JSON file or plain-text log file for immediate analysis and persistence.",
+                "description": "Upload a JSON file or plain-text log file for immediate health analysis and persistence.",
                 "auth_required": False,
                 "supported_formats": [".json", ".log", ".txt", "raw text"],
                 "response_codes": [200, 400, 500]
@@ -376,7 +391,15 @@ def get_api_docs() -> Tuple[Any, int]:
             {
                 "path": "/api/analytics",
                 "method": "GET",
-                "description": "Fetch aggregated analytics metrics, recurring error frequencies, and Chart.js datasets.",
+                "description": "Fetch aggregated health score, component health, anomalies, and recurring error analytics.",
+                "auth_required": False,
+                "response_codes": [200, 503]
+            },
+            {
+                "path": "/api/report",
+                "method": "GET",
+                "description": "Generate executive System Health & Reliability Report in JSON or Markdown format.",
+                "query_params": ["format (json|markdown)", "download (1|0)"],
                 "auth_required": False,
                 "response_codes": [200, 503]
             },
@@ -389,6 +412,41 @@ def get_api_docs() -> Tuple[Any, int]:
             }
         ]
     }), 200
+
+
+@api_bp.route("/report", methods=["GET"])
+def get_health_report() -> Tuple[Any, int]:
+    """
+    GET /api/report
+    Generate real-time executive System Health & Reliability Report.
+    Query parameters:
+    - format: 'json' (default) or 'markdown'
+    - download: '1' or 'true' to trigger file attachment
+    """
+    db = get_db()
+    try:
+        raw_data = db.get_analytics_data()
+        formatted_analytics = compute_database_analytics(raw_data)
+        report_data = formatted_analytics.get("report") or generate_health_report(formatted_analytics)
+
+        fmt = request.args.get("format", "json").lower()
+        if fmt in ("markdown", "md"):
+            md_text = report_data.get("markdown", "")
+            download = request.args.get("download", "0").lower() in ("1", "true")
+            headers = {}
+            if download:
+                filename = f"LogHealth_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+                headers["Content-Disposition"] = f"attachment; filename={filename}"
+            return Response(md_text, mimetype="text/markdown", headers=headers)
+
+        return jsonify({
+            "status": "success",
+            "report": report_data
+        }), 200
+    except DatabaseError as de:
+        logger.exception("Database error in /api/report")
+        return jsonify({"status": "error", "error": f"Failed to generate report: {de}"}), 503
+
 
 
 @api_bp.route("/demo", methods=["GET"])

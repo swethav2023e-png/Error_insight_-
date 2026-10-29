@@ -1,6 +1,6 @@
 """
-Classifier service for ErrorInsight.
-Performs rule-based error categorization and severity normalization.
+Classifier service for LogHealth.
+Performs rule-based component categorization and severity normalization.
 """
 
 import re
@@ -11,6 +11,7 @@ CANONICAL_CATEGORIES = {
     "db": "Database",
     "authentication": "Authentication",
     "auth": "Authentication",
+    "security": "Authentication",
     "network": "Network",
     "net": "Network",
     "file system": "File System",
@@ -18,6 +19,14 @@ CANONICAL_CATEGORIES = {
     "fs": "File System",
     "memory": "Memory",
     "mem": "Memory",
+    "api": "API & Backend",
+    "api & backend": "API & Backend",
+    "backend": "API & Backend",
+    "background jobs": "Background Jobs",
+    "worker": "Background Jobs",
+    "queue": "Background Jobs",
+    "infrastructure": "Infrastructure",
+    "infra": "Infrastructure",
     "application": "Application",
     "app": "Application",
 }
@@ -90,6 +99,27 @@ CATEGORY_RULES = [
             r"\bstack overflow\b", r"\bgarbage collector\b", r"\bmalloc\b",
             r"\bcannot allocate memory\b"
         ]
+    ),
+    (
+        "Background Jobs",
+        [
+            r"\bcelery\b", r"\brq\b", r"\bsidekiq\b", r"\bcron(?:job)?\b",
+            r"\bqueue\b", r"\bworker (?:died|timeout|failed)\b", r"\btask failed\b"
+        ]
+    ),
+    (
+        "Infrastructure",
+        [
+            r"\bdocker\b", r"\bk8s\b", r"\bkubernetes\b", r"\bcontainer\b",
+            r"\bec2\b", r"\bnginx\b", r"\bapache\b", r"\bload balancer\b"
+        ]
+    ),
+    (
+        "API & Backend",
+        [
+            r"\brest api\b", r"\bgraphql\b", r"\bendpoint\b", r"\bcontroller\b",
+            r"\bhandler\b", r"\broute not found\b", r"\bmethod not allowed\b"
+        ]
     )
 ]
 
@@ -106,13 +136,18 @@ def classify_category(message: str, explicit_type: Optional[str] = None) -> str:
     """
     Determine category:
     1. If explicit_type is a recognized valid category, preserve it.
-    2. Otherwise, use rule-based matching against the error message.
-    3. Fallback to 'Application'.
+    2. If explicit_type is present and non-empty, preserve as custom category.
+    3. Otherwise, use rule-based matching against the error message.
+    4. Fallback to 'Application'.
     """
     if explicit_type:
         cleaned_type = str(explicit_type).strip().lower()
         if cleaned_type in CANONICAL_CATEGORIES:
             return CANONICAL_CATEGORIES[cleaned_type]
+        # Preserve user-supplied explicit category name if clean
+        clean_raw = str(explicit_type).strip()
+        if clean_raw and len(clean_raw) <= 50:
+            return clean_raw.title()
 
     msg_lower = str(message or "").lower()
 
@@ -122,3 +157,4 @@ def classify_category(message: str, explicit_type: Optional[str] = None) -> str:
                 return category_name
 
     return "Application"
+

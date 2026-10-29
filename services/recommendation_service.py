@@ -1,5 +1,5 @@
 """
-Recommendation service for ErrorInsight.
+Recommendation service for LogHealth.
 Provides transparent, rule-based troubleshooting suggestions and possible causes.
 All recommendations are explicitly labeled as suggestions, not verified root-cause diagnoses.
 """
@@ -87,6 +87,45 @@ CATEGORY_BASE_RECOMMENDATIONS = {
             "Audit caches for proper TTL eviction policies to prevent unbounded memory growth."
         ]
     },
+    "API & Backend": {
+        "title": "API Gateway & Backend Routing Failures",
+        "causes": [
+            "Unmatched route endpoint path or unsupported HTTP method.",
+            "Downstream microservice response serialization failure or schema drift.",
+            "High inbound traffic exceeding rate-limiting or concurrency capacity."
+        ],
+        "solutions": [
+            "Verify route registration and API gateway ingress path mappings.",
+            "Confirm request and response schemas align with current API versioning.",
+            "Check gateway rate-limiting limits and scale backend container replicas."
+        ]
+    },
+    "Background Jobs": {
+        "title": "Asynchronous Job & Queue Worker Failures",
+        "causes": [
+            "Task timeout exceeded while processing intensive batch operations.",
+            "Queue broker connection dropped or message broker memory saturated.",
+            "Uncaught serialization or deserialization exception in job arguments."
+        ],
+        "solutions": [
+            "Inspect dead-letter queue (DLQ) messages for poison payloads.",
+            "Increase task worker timeout threshold or partition long tasks into smaller sub-tasks.",
+            "Check message broker health, queue depth, and worker memory consumption."
+        ]
+    },
+    "Infrastructure": {
+        "title": "Infrastructure & Containerization Anomalies",
+        "causes": [
+            "Container crash loop (CrashLoopBackOff) due to failing readiness/liveness probes.",
+            "Host node CPU or disk I/O saturation causing throttling.",
+            "Ingress proxy or reverse-proxy misconfiguration."
+        ],
+        "solutions": [
+            "Inspect container exit codes and logs via docker logs / kubectl logs.",
+            "Review node resource utilization metrics and adjust CPU/memory requests.",
+            "Verify reverse proxy upstream targets and health check configurations."
+        ]
+    },
     "Application": {
         "title": "Application Logic & Runtime Exceptions",
         "causes": [
@@ -103,6 +142,7 @@ CATEGORY_BASE_RECOMMENDATIONS = {
         ]
     }
 }
+
 
 # Specific pattern overrides for finer-grained suggestions
 SPECIFIC_SIGNATURE_RULES = [

@@ -1,6 +1,7 @@
 """
-Web routes for ErrorInsight dashboard UI.
+Web routes for LogHealth dashboard UI.
 """
+
 
 from flask import Blueprint, render_template
 

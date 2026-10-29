@@ -1,5 +1,5 @@
 """
-ErrorInsight – Intelligent Error Analyzer
+LogHealth – Log Analytics and System Health Intelligence
 Main Flask Application Entry Point and Application Factory.
 """
 
@@ -15,7 +15,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
 )
-logger = logging.getLogger("ErrorInsight")
+logger = logging.getLogger("LogHealth")
+
 
 
 def create_app(config_class=None) -> Flask:
@@ -75,5 +76,6 @@ app = create_app()
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     debug = os.environ.get("FLASK_DEBUG", "1").lower() in ("1", "true")
-    logger.info("Starting ErrorInsight on http://127.0.0.1:%s", port)
+    logger.info("Starting LogHealth on http://127.0.0.1:%s", port)
     app.run(host="127.0.0.1", port=port, debug=debug)
+

@@ -1,5 +1,5 @@
 """
-Database abstraction layer and SQLite implementation for ErrorInsight.
+Database abstraction layer and SQLite implementation for LogHealth.
 Enables pluggable backend architecture (SQLite for local dev, PostgreSQL for production).
 """
 
@@ -61,6 +61,11 @@ class DatabaseManager(ABC):
         pass
 
     @abstractmethod
+    def get_all_records(self, limit: int = 5000) -> List[Dict[str, Any]]:
+        """Retrieve stored records up to limit for deep analytical processing."""
+        pass
+
+    @abstractmethod
     def get_analytics_data(self) -> Dict[str, Any]:
         """Fetch raw aggregated counts for category, severity, and recurring errors."""
         pass
@@ -74,6 +79,7 @@ class DatabaseManager(ABC):
     def clear_all(self) -> int:
         """Clear all records from error_logs (useful for testing and reset)."""
         pass
+
 
 
 class SQLiteManager(DatabaseManager):
@@ -338,6 +344,20 @@ class SQLiteManager(DatabaseManager):
             logger.error("Failed to count error_logs: %s", exc)
             raise DatabaseError(f"Database count failure: {exc}") from exc
 
+    def get_all_records(self, limit: int = 5000) -> List[Dict[str, Any]]:
+        """Retrieve stored records up to limit for deep analytical processing."""
+        try:
+            with self._get_connection() as conn:
+                rows = conn.execute(
+                    "SELECT id, source_id, source_name, timestamp, category, message, severity, created_at "
+                    "FROM error_logs ORDER BY timestamp ASC, id ASC LIMIT ?",
+                    (limit,)
+                ).fetchall()
+                return [dict(r) for r in rows]
+        except sqlite3.Error as exc:
+            logger.error("Failed to fetch all records: %s", exc)
+            raise DatabaseError(f"Database query failure: {exc}") from exc
+
     def get_analytics_data(self) -> Dict[str, Any]:
         """Aggregate stored records for analytics dashboard."""
         try:
@@ -354,6 +374,17 @@ class SQLiteManager(DatabaseManager):
                 ).fetchall()
                 category_counts = {r["category"]: r["count"] for r in cat_rows}
 
+                # Category and severity breakdown for component risk ranking
+                cat_sev_rows = conn.execute(
+                    "SELECT category, severity, COUNT(*) as count FROM error_logs GROUP BY category, severity"
+                ).fetchall()
+                category_severity_breakdown = {}
+                for r in cat_sev_rows:
+                    cat = r["category"]
+                    if cat not in category_severity_breakdown:
+                        category_severity_breakdown[cat] = {}
+                    category_severity_breakdown[cat][r["severity"]] = r["count"]
+
                 # Recurring error messages (grouping by exact message)
                 recur_rows = conn.execute("""
                     SELECT message, category, severity, COUNT(*) as count, MAX(timestamp) as last_seen
@@ -365,15 +396,13 @@ class SQLiteManager(DatabaseManager):
                 recurring_messages = [dict(r) for r in recur_rows]
 
                 # Timestamp series (hourly/daily trend)
-                # SQLite SUBSTR(timestamp, 1, 10) gives YYYY-MM-DD
-                # SUBSTR(timestamp, 1, 13) gives YYYY-MM-DD HH
                 trend_rows = conn.execute("""
                     SELECT SUBSTR(timestamp, 1, 13) as time_bucket, COUNT(*) as count
                     FROM error_logs
                     WHERE timestamp IS NOT NULL AND LENGTH(timestamp) >= 10
                     GROUP BY time_bucket
                     ORDER BY time_bucket ASC
-                    LIMIT 30
+                    LIMIT 50
                 """).fetchall()
                 timeline = [{"time": r["time_bucket"], "count": r["count"]} for r in trend_rows]
 
@@ -382,9 +411,16 @@ class SQLiteManager(DatabaseManager):
                     SELECT id, source_id, source_name, timestamp, category, message, severity
                     FROM error_logs
                     ORDER BY id DESC
-                    LIMIT 10
+                    LIMIT 15
                 """).fetchall()
                 recent_records = [dict(r) for r in recent_rows]
+
+                # Full records list for consistent analytical processing
+                all_rows = conn.execute(
+                    "SELECT id, source_id, source_name, timestamp, category, message, severity, created_at "
+                    "FROM error_logs ORDER BY timestamp ASC, id ASC LIMIT 5000"
+                ).fetchall()
+                all_records = [dict(r) for r in all_rows]
 
                 total_count = conn.execute("SELECT COUNT(*) FROM error_logs").fetchone()[0]
 
@@ -393,13 +429,16 @@ class SQLiteManager(DatabaseManager):
                 "unique_categories": len(category_counts),
                 "severity_counts": severity_counts,
                 "category_counts": category_counts,
+                "category_severity_breakdown": category_severity_breakdown,
                 "recurring_errors": recurring_messages,
                 "timeline": timeline,
-                "recent_errors": recent_records
+                "recent_errors": recent_records,
+                "all_records": all_records
             }
         except sqlite3.Error as exc:
             logger.error("Failed to compute analytics: %s", exc)
             raise DatabaseError(f"Database analytics query failure: {exc}") from exc
+
 
     def check_health(self) -> Dict[str, Any]:
         """Check SQLite connection and file size."""

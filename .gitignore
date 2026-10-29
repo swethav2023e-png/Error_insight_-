@@ -3,6 +3,8 @@
 *.db
 test_*.db
 ErrorInsight_Project.zip
+LogHealth_Project.zip
+*.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

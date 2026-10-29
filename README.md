@@ -1,28 +1,53 @@
-# ErrorInsight – Intelligent Error Analyzer
+# LogHealth — Log Analytics and System Health Intelligence
 
-**ErrorInsight** is a cybersecurity and system-monitoring web application designed to analyze log files and structured error payloads produced by external Log Parsers. It classifies errors across 6 subsystems, computes real frequency and severity statistics, detects recurring anomalies, provides rule-based remediation suggestions, and exposes a reusable, documented REST API for cross-project integration.
+> **LogHealth is a log analytics and system health intelligence platform that transforms application logs into actionable insights about reliability, operational health, anomalies, and system behavior.**
+
+[![Python](https://img.shields.io/badge/Python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+[![Framework](https://img.shields.io/badge/Framework-Flask%203.1-black.svg)](https://palletsprojects.com/p/flask/)
+[![Frontend](https://img.shields.io/badge/Frontend-Vanilla%20HTML%2FCSS%2FJS-orange.svg)](https://developer.mozilla.org/)
+[![Visualizations](https://img.shields.io/badge/Charts-Chart.js%204.4-yellow.svg)](https://www.chartjs.org/)
+[![Deployment](https://img.shields.io/badge/Deploy-Vercel%20Serverless-lightgrey.svg)](https://vercel.com/)
+[![Tests](https://img.shields.io/badge/Tests-20%20Passing-brightgreen.svg)](tests/)
 
 ---
 
-## 1. Quick Start & Execution
+## 1. Overview & Core Mission
+
+LogHealth evolves traditional log parsing into a comprehensive **System Health Intelligence** platform. Rather than acting as a code-level patch generator, LogHealth monitors the operational reliability, risk posture, and behavior of production services through their event logs.
+
+### Key Capabilities
+- **Explainable System Health Score (0–100)**: Transparent calculation incorporating weighted event severity, failure density, detected anomalies, and component failure concentrations. Displays an explicit *Insufficient Data* provisional state when 0 logs are present.
+- **Component & Subsystem Health**: Classifies logs across components (`API & Backend`, `Database`, `Authentication`, `Network`, `Background Jobs`, `Infrastructure`, `File System`, `Memory`, `Application`), calculating failure rates, event volumes, and relative risk scores.
+- **Statistical Anomaly Detection**: Identifies volume spikes using dynamic standard deviations ($z > 1.5$), critical error bursts, and dangerous concentrations in single components.
+- **Prioritized Risk Assessment**: Ranks architectural and operational risks by severity, frequency, and impact evidence, pairing each with monitoring and mitigation guidance.
+- **Historical Baseline Comparison**: Compares current log batches with persisted historical baselines, reporting volume change ($\Delta\%$), newly emerged error signatures, and resolved issues.
+- **Executive Health Reports**: Generates structured 10-section health reports exportable as JSON or formatted Markdown (`GET /api/report`).
+- **Professional Command-Center UI**: Modern responsive interface with 10 dedicated views, glassmorphic styling, and Chart.js visualizations.
+- **Robust Ingestion**: Accepts structured JSON (Format A with `errors` object, Format B flat array), Syslog, Apache/Nginx web logs, and raw stack traces with SHA256 idempotency deduplication.
+
+---
+
+## 2. Quick Start & Execution
 
 ### Prerequisites
-- Python 3.9+ (Python 3.12+ recommended)
+- Python 3.9+ (Python 3.11 or 3.12 recommended)
 - `pip` package manager
 
-### Installation & Launch
+### Local Installation & Launch
 
-1. **Clone or extract** the repository and open the project directory in VS Code or your terminal:
+1. **Navigate to the project root directory**:
    ```bash
    cd Error_Insight--main
    ```
 
 2. **(Optional) Create and activate a virtual environment**:
    ```bash
+   # Windows PowerShell:
    python -m venv venv
-   # On Windows (PowerShell):
    .\venv\Scripts\Activate.ps1
-   # On macOS/Linux:
+
+   # macOS / Linux:
+   python3 -m venv venv
    source venv/bin/activate
    ```
 
@@ -31,136 +56,167 @@
    pip install -r requirements.txt
    ```
 
-4. **Configure environment variables (Optional)**:
-   A template is provided in `.env.example`. By default, ErrorInsight uses:
-   - `DATABASE_PATH=error_insight.db` (auto-created on startup)
-   - `API_KEY=dev-secret-key-12345`
-   - `PORT=5000`
-
-5. **Start the Flask server**:
+4. **Start the LogHealth platform**:
    ```bash
    python app.py
    ```
 
-6. **Open the Dashboard in your browser**:
-   Navigate to: **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
+5. **Open the Dashboard**:
+   Navigate to **[http://127.0.0.1:5000](http://127.0.0.1:5000)** in your browser.
 
 ---
 
-## 2. Key Architecture & Technology Stack
+## 3. Explainable Health Scoring Formula
+
+LogHealth does not generate arbitrary numbers or claim measured uptime without telemetry. The health score is evidence-based and calculated as:
+
+$$\text{Raw Penalty} = \left(12 \times N_{\text{critical}} + 4 \times N_{\text{error}} + 1.5 \times N_{\text{warning}}\right) \times \text{DensityWeight}$$
+
+$$\text{Total Penalty} = \text{Raw Penalty} + \text{AnomalyPenalty} + \text{ConcentrationPenalty}$$
+
+$$\text{Health Score} = \max\left(0, \min\left(100, \text{round}(100 - \text{Total Penalty})\right)\right)$$
+
+### Contributing Factors
+1. **Severity Weights**: Critical (12 pts), Error (4 pts), Warning (1.5 pts), Info (0 pts).
+2. **Density Weight**: Ratio of non-informational events to total events ($\frac{N_{\text{issues}}}{N_{\text{total}}}$).
+3. **Anomaly Penalty**: Adds 5 to 10 penalty points for detected statistical volume spikes or critical error bursts.
+4. **Concentration Penalty**: Adds 5 penalty points if over 65% of failures are concentrated in a single subsystem.
+
+### Health Status Bands
+| Health Score | Status | Description |
+| :--- | :--- | :--- |
+| **90 – 100** | **EXCELLENT** | System operating within healthy parameters; minimal warnings. |
+| **75 – 89** | **GOOD** | Normal operational load; minor errors handled gracefully. |
+| **50 – 74** | **FAIR** | Elevated warning/error rates; targeted investigation recommended. |
+| **25 – 49** | **DEGRADED** | High failure density or recurring critical events; service stability at risk. |
+| **0 – 24** | **CRITICAL** | Severe cascading failures or systemic failure concentration. Immediate action required. |
+| **N/A** | **NO DATA** | Explicit provisional state when 0 events exist in the dataset. |
+
+---
+
+## 4. Architecture & Technology Stack
 
 | Layer | Technology | Description |
 | :--- | :--- | :--- |
-| **Frontend** | HTML5, CSS3, Vanilla JS | Cyber command-center theme, responsive layout, glassmorphic panels. |
-| **Visualizations** | Chart.js 4.4 | Bar chart for category breakdown, doughnut for severity impact, line/area for error trends over time. |
-| **Backend** | Python 3 + Flask 3.1 | Modular architecture with Application Factory, Blueprints, and Services. |
-| **Database** | SQLite3 (`sqlite3`) | Parameterized queries, WAL mode, indexes on `timestamp`, `category`, `severity`. |
-| **Abstraction** | `DatabaseManager` | Extensible repository pattern allowing seamless migration to PostgreSQL without modifying application logic. |
-| **Security** | API Key (`X-API-Key`) | Header-based authentication protecting data-ingestion endpoints. |
+| **Frontend** | HTML5, CSS3, Vanilla JS | Dark command-center theme, responsive layout, glassmorphic cards, zero heavyweight JS frameworks. |
+| **Visualizations** | Chart.js 4.4 | Reactive timeline charts, severity doughnuts, and component distribution bars. |
+| **Backend** | Python 3 + Flask 3.1 | Modular Application Factory with Service Layer architecture and Blueprint routing. |
+| **Database** | SQLite3 (`sqlite3`) | Parameterized queries, WAL mode, composite indexes on `timestamp`, `category`, and `severity`. |
+| **Persistence Layer**| `DatabaseManager` | Extensible repository pattern allowing transparent switching between SQLite and external databases. |
+| **Deduplication** | SHA256 Idempotency Hash | Prevents duplicate event insertion during network retries or batch re-processing. |
+| **Security** | API Key (`X-API-Key`) | Header-based authentication protecting automated ingestion endpoints. |
 
 ---
 
-## 3. Project Directory Structure
+## 5. Directory Structure
 
 ```
-ErrorInsight/
-├── app.py                      # Flask Application Factory & Server Entry Point
-├── config.py                   # App Configuration (Base & Testing)
+LogHealth/
+├── app.py                      # Flask Application Factory & WSGI Server Entry Point
+├── config.py                   # Environment Configuration & DB Path Resolver
 ├── requirements.txt            # Python Dependencies
-├── .env.example                # Environment Variable Template
-├── .gitignore                  # Git Ignore rules for DB, env, caches
-├── README.md                   # Complete Documentation & Execution Guide
-├── sample_parser_client.py     # Standalone Python client simulating friend's Log Parser
+├── vercel.json                 # Vercel Serverless Deployment Configuration
+├── sample_parser_client.py     # Standalone Python client simulating log collector
 ├── database/
 │   ├── __init__.py
 │   ├── db.py                   # DatabaseManager Abstraction Layer & SQLiteManager
 │   └── schema.sql              # SQL Schema with indexes & idempotency constraints
 ├── services/
 │   ├── __init__.py
-│   ├── classifier_service.py   # Rule-based categorization & severity normalizer
-│   ├── parser_service.py       # JSON (Format A/B) & plain-text log parsing engine
-│   ├── analytics_service.py    # Frequency, severity, timeline, and Chart.js metrics
-│   └── recommendation_service.py # Rule-based preliminary causes & solutions
+│   ├── classifier_service.py   # Subsystem classification & severity normalizer
+│   ├── parser_service.py       # JSON (Format A/B), Syslog, and raw log parser
+│   ├── analytics_service.py    # Health scoring, anomaly detection, component risk, & reports
+│   └── recommendation_service.py # Operational mitigations & monitoring suggestions
 ├── routes/
 │   ├── __init__.py
-│   ├── api_routes.py           # REST endpoints (/health, /logs, /analyze, /history, etc.)
+│   ├── api_routes.py           # REST endpoints (/health, /logs, /analyze, /report, etc.)
 │   └── web_routes.py           # Dashboard single-page template router
 ├── templates/
-│   └── index.html              # Cyber-themed responsive dashboard UI
+│   └── index.html              # Responsive command-center dashboard (10 views)
 ├── static/
 │   ├── css/
-│   │   └── dashboard.css       # Command-center styling, glassmorphism, responsive
+│   │   └── dashboard.css       # Command-center styling, glassmorphism, responsive grid
 │   └── js/
-│       └── dashboard.js        # Reactive Chart.js charts, filters, modal, and API console
+│       └── dashboard.js        # Reactive Chart.js charts, tab router, modal, & report viewer
 ├── sample_data/
 │   ├── format_a_errors.json    # Format A structured JSON sample
 │   ├── format_b_errors.json    # Format B array JSON sample
 │   ├── sample_system.log       # Plain-text multi-line log sample
 │   └── malformed_sample.txt    # Malformed file for validation testing
 ├── api_docs/
-│   └── integration_guide.md    # Full integration contract for the friend's Log Parser
+│   └── integration_guide.md    # Integration contract for external log collectors
 └── tests/
     ├── __init__.py
-    └── test_app.py             # 14 automated unit tests using isolated test SQLite DB
+    └── test_app.py             # 20 automated unit tests with isolated test SQLite DB
 ```
 
 ---
 
-## 4. Integration with the Friend's Log Parser
+## 6. REST API Reference
 
-The Log Parser is a separate project that extracts errors from application logs and pushes structured records into ErrorInsight. Both systems interact over HTTP and store data into the same persistent database.
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/health` | Health check, DB connectivity, stored record count | No |
+| `POST` | `/api/logs` | External log collector ingestion endpoint | **Yes** (`X-API-Key`) |
+| `POST` | `/api/analyze` | Upload JSON or `.log` file for analysis & saving | No |
+| `GET` | `/api/history` | Stored records with pagination & search filtering | No |
+| `GET` | `/api/analytics` | Aggregated metrics, health score, anomalies, component risks | No |
+| `GET` | `/api/report` | Executive health report (`?format=markdown&download=1`) | No |
+| `GET` | `/api/errors/{id}` | Detailed error inspection & operational recommendations | No |
+| `GET` | `/api/docs` | OpenAPI-style JSON specification | No |
+| `POST` | `/api/seed` | Seed realistic demo dataset (12 records) | No |
+| `POST` | `/api/clear` | Clear all records from database | No |
 
-### 1. Ingestion Endpoint
-- **URL**: `POST http://127.0.0.1:5000/api/logs`
-- **Required Header**: `X-API-Key: dev-secret-key-12345`
-- **Content-Type**: `application/json`
-
-### 2. Supported JSON Formats
-
-#### Format A (Recommended):
-```json
-{
-  "errors": [
-    {
-      "id": "PARSER-LOG-101",
-      "timestamp": "2026-10-29 08:30:00",
-      "type": "Database",
-      "message": "Database connection refused on port 5432",
-      "severity": "Critical"
-    }
-  ]
-}
-```
-
-#### Format B (Direct Array):
-```json
-[
-  {
-    "timestamp": "2026-10-29 08:35:10",
-    "message": "Connection timeout connecting to upstream microservice",
-    "severity": "Warning"
-  }
-]
-```
-
-### 3. Idempotency & Duplicate Prevention
-ErrorInsight automatically calculates an idempotency hash for each event:
-`SHA256(source_name + "|" + source_id + "|" + timestamp + "|" + message)`
-- If the exact same record is submitted again, ErrorInsight safely ignores it and increments the `duplicates` counter.
-- Repeated error messages occurring at different timestamps are **never discarded**.
-
-### 4. Run the Simulated Log Parser Client
-To test the integration end-to-end:
+### Submitting Logs (`POST /api/logs`)
 ```bash
-python sample_parser_client.py
+curl -X POST http://127.0.0.1:5000/api/logs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-secret-key-12345" \
+  -d '{
+    "errors": [
+      {
+        "id": "LOG-101",
+        "timestamp": "2026-10-29 08:30:00",
+        "type": "Database",
+        "message": "Connection pool exhausted on port 5432",
+        "severity": "Critical"
+      }
+    ]
+  }'
 ```
-This script checks backend health, sends a batch of 4 parsed records, tests duplicate detection, and reports HTTP response details.
+
+### Exporting Executive Report (`GET /api/report`)
+```bash
+# JSON Format:
+curl http://127.0.0.1:5000/api/report
+
+# Download Markdown Report:
+curl -OJ "http://127.0.0.1:5000/api/report?format=markdown&download=1"
+```
 
 ---
 
-## 5. Automated Testing
+## 7. Cloud Deployment & Vercel Serverless Architecture
 
-ErrorInsight includes an automated test suite verifying all 14 project requirements:
+LogHealth is fully configured for deployment on [Vercel](https://vercel.com/) via the existing [vercel.json](file:///c:/Users/sweth/Downloads/Error_Insight_Database/Error_Insight_Database_Ready/Error_Insight--main/vercel.json) configuration:
+
+### Ephemeral Storage Handling
+- In Vercel Serverless environments, the filesystem is **read-only** with the exception of the `/tmp` directory.
+- `config.py` automatically detects Vercel environments (`VERCEL=1`) and routes SQLite databases to `tempfile.gettempdir()` (`/tmp/loghealth.db`), ensuring error-free execution and zero crashes during serverless invocations.
+
+### Durable Multi-Invocation Persistence
+- Because serverless `/tmp` directories are ephemeral across cold starts and container recycles, durable long-term storage can be connected seamlessly.
+- Thanks to the `DatabaseManager` abstraction, you can connect an external hosted database (such as PostgreSQL via Supabase, Neon, or Railway) by setting the environment variable in your Vercel Project Settings:
+  ```env
+  DATABASE_PATH=postgresql://user:pass@ep-hostname.neon.tech/loghealth?sslmode=require
+  ```
+- No changes to application code are required.
+
+---
+
+## 8. Automated Testing
+
+LogHealth includes an automated test suite containing **20 unit tests**:
 1. Application startup and database initialization
 2. Health endpoint (`GET /api/health`)
 3. Valid JSON upload (Format A and Format B)
@@ -175,41 +231,22 @@ ErrorInsight includes an automated test suite verifying all 14 project requireme
 12. Duplicate submission handling and idempotency
 13. Simulated Log Parser client integration
 14. Database failures and error response codes
+15. Explainable health score computation (bounds, formula, penalties)
+16. Component health ranking and failure rate calculation
+17. Statistical anomaly detection (volume spike and burst detection)
+18. Prioritized risk assessment generation
+19. Historical baseline comparison logic
+20. Executive health report generation (`GET /api/report`)
 
 ### Run Tests:
 ```bash
-python -m unittest discover tests
+python -m unittest discover -s tests -v
 ```
-*Note: All tests run against a temporary isolated database (`test_*.db`) that is automatically cleaned up, ensuring real application data is never modified.*
+
+*Note: All tests execute against an isolated temporary SQLite database that is automatically destroyed upon test completion.*
 
 ---
 
-## 6. REST API Endpoints Reference
-
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/health` | Health check, DB connectivity, stored record count | No |
-| `POST` | `/api/logs` | External Log Parser ingestion endpoint | **Yes** (`X-API-Key`) |
-| `POST` | `/api/analyze` | Upload JSON or `.log` file for analysis & saving | No |
-| `GET` | `/api/history` | Stored records with pagination & search filtering | No |
-| `GET` | `/api/analytics` | Aggregated metrics, frequency counts, Chart.js datasets | No |
-| `GET` | `/api/errors/{id}` | Detailed error inspection & rule-based recommendations | No |
-| `GET` | `/api/docs` | OpenAPI-style JSON specification | No |
-| `POST` | `/api/seed` | Seed realistic demo dataset (12 records) | No |
-| `POST` | `/api/clear` | Clear all records from database | No |
-
----
-
-## 7. Troubleshooting & FAQ
-
-- **Database is locked**: Ensure you do not have external SQLite browser locks open. ErrorInsight uses a 15-second busy timeout and WAL mode.
-- **Unauthorized (401) error**: Check that your request header includes `X-API-Key: dev-secret-key-12345` (or the key specified in your `.env` file).
-- **Connecting from another computer on the same network**:
-  1. Find your computer's local IP address (`ipconfig` on Windows, `ifconfig` on Linux/macOS).
-  2. Start Flask listening on all network interfaces:
-     ```bash
-     python app.py
-     ```
-     *(In `app.py`, change host to `0.0.0.0` or run `flask run --host=0.0.0.0 --port=5000`)*.
-  3. On the other computer, point the Log Parser to `http://<YOUR_IP>:5000/api/logs`.
-- **Production Deployment Note**: For production hosting, configure a PostgreSQL database URL and set environment variable `DATABASE_PATH` to your connection string via the extensible `DatabaseManager` interface.
+## 9. Live Resources
+- **GitHub Repository**: [https://github.com/swethav2023e-png/Error_insight_-](https://github.com/swethav2023e-png/Error_insight_-)
+- **Vercel Live Deployment**: [https://error-insight-ruddy.vercel.app/](https://error-insight-ruddy.vercel.app/)

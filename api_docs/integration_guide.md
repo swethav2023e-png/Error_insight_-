@@ -1,39 +1,38 @@
-# ErrorInsight Integration Contract for External Log Parsers
+# LogHealth Integration Contract for External Log Collectors & Parsers
 
-This document specifies the technical contract and integration protocol for connecting external Log Parsers to the **ErrorInsight – Intelligent Error Analyzer** backend.
+This document specifies the technical contract and integration protocol for connecting external log collectors, parsers, and monitoring agents to the **LogHealth – Log Analytics and System Health Intelligence** platform.
 
 ---
 
 ## 1. Architecture Overview
 
 ```
-┌────────────────────────┐                   ┌───────────────────────────────┐
-│ External Log Parser    │                   │ ErrorInsight Backend (Flask)  │
-│ (Any Language / Host)  │                   │ - Categorization & Validation │
-└───────────┬────────────┘                   │ - Persistence & Deduplication │
-            │                                └──────────────┬────────────────┘
-            │  POST /api/logs (JSON)                        │
-            │  Header: X-API-Key: <key>                     │  Parameterized SQL
-            ▼                                               ▼
-┌────────────────────────────────────────────────────────────────────────────┐
-│                    Shared SQLite / PostgreSQL Database                     │
-│                        (table: `error_logs`)                               │
-└────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────┐                 ┌──────────────────────────────────────┐
+│ External Log Collector / Parser │                 │ LogHealth Backend (Flask Serverless) │
+│ (Any Language, Host, or Agent)  │                 │ - Classification & Validation Engine │
+└────────────────┬────────────────┘                 │ - Deduplication & Health Scoring     │
+                 │                                  │ - Anomaly & Component Risk Engine    │
+                 │  POST /api/logs (JSON)           └───────────────────┬──────────────────┘
+                 │  Header: X-API-Key: <key>                            │
+                 ▼                                                      ▼ Parameterized Queries
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                           Database (SQLite / PostgreSQL)                                 │
+│                                (table: `error_logs`)                                     │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Both projects interface with the same persistent backend service and write into the same central database.
+External collectors interface with the LogHealth REST API over HTTP, pushing structured records that are analyzed in real time.
 
 ---
 
 ## 2. Base URL Configuration
 
-- **Local Development (Same Computer):**
+- **Local Development:**
   `http://127.0.0.1:5000`
-- **Local Network (Different Computers on same Wi-Fi/LAN):**
+- **Local Network (LAN / Multi-machine):**
   `http://<SERVER_IP_ADDRESS>:5000` (e.g. `http://192.168.1.105:5000`)
-  *Note: Start Flask with `python app.py` listening on `0.0.0.0` or allow firewall incoming traffic on port 5000.*
-- **Production / Deployed URL:**
-  `https://your-errorinsight-domain.com`
+- **Vercel / Cloud Production Deployment:**
+  `https://error-insight-ruddy.vercel.app` (or custom configured domain)
 
 ---
 
@@ -45,7 +44,7 @@ All requests to `POST /api/logs` must include the shared API Key.
 | :--- | :--- | :--- | :--- |
 | `X-API-Key` | Plain String | **Yes** | `dev-secret-key-12345` |
 | `Content-Type` | MIME type | **Yes** | `application/json` |
-| `X-Source-Project` | String identifier | *Optional* | `Production_Log_Parser_v2` |
+| `X-Source-Project` | String identifier | *Optional* | `Production_Log_Collector_v2` |
 
 Alternatively, you may pass the token via standard Bearer authorization:
 `Authorization: Bearer <API_KEY>`
@@ -56,7 +55,7 @@ Alternatively, you may pass the token via standard Bearer authorization:
 
 ### `POST /api/logs`
 
-Submits parsed error records in bulk or individually.
+Submits parsed log records in bulk or individually.
 
 #### Supported Request Payload Formats
 
@@ -68,7 +67,7 @@ Submits parsed error records in bulk or individually.
       "id": "PARSER-LOG-001",
       "timestamp": "2026-10-29 08:30:00",
       "type": "Database",
-      "message": "Database connection refused on port 5432",
+      "message": "Database connection pool exhausted: timeout waiting for connection",
       "severity": "Critical"
     },
     {
@@ -97,21 +96,21 @@ Submits parsed error records in bulk or individually.
 
 | Field | Type | Required | Description | Allowed Values |
 | :--- | :--- | :--- | :--- | :--- |
-| `message` | string | **Yes** | The raw or normalized error description. | Non-empty text. |
+| `message` | string | **Yes** | The raw or normalized log message. | Non-empty text. |
 | `timestamp` | string | *Optional* | Occurrence timestamp. (Defaults to server receive time). | `YYYY-MM-DD HH:MM:SS` or ISO-8601. |
 | `severity` | string | *Optional* | Impact level. (Defaults to `Error`). | `Critical`, `Error`, `Warning`, `Info` *(Aliases like FATAL, WARN, EXCEPTION auto-normalized)* |
-| `type` / `category` | string | *Optional* | System category. If omitted or invalid, ErrorInsight auto-classifies. | `Database`, `Authentication`, `Network`, `File System`, `Memory`, `Application` |
-| `id` / `source_id` | string/int | *Optional* | External identifier from the source parser. | Any unique string or integer. |
+| `type` / `category` | string | *Optional* | System component. If omitted, LogHealth auto-classifies. | `Database`, `Authentication`, `Network`, `API & Backend`, `Background Jobs`, `Infrastructure`, `File System`, `Memory`, `Application` |
+| `id` / `source_id` | string/int | *Optional* | External identifier from source collector. | Any unique string or integer. |
 
 ---
 
 ## 5. Duplicate Prevention & Idempotency
 
 To prevent duplicate database records during network retries or re-scanned log files:
-1. ErrorInsight calculates an **Idempotency Hash** from:
+1. LogHealth computes an **Idempotency Hash** from:
    `hash = SHA256(source_name + "|" + source_id + "|" + timestamp + "|" + message)`
-2. If the identical error event is transmitted again, ErrorInsight safely ignores the duplicate and increments the `duplicates` counter in the response.
-3. Legitimate repeated errors (e.g. multiple connection timeouts at different seconds) have different timestamps and are **always preserved**.
+2. If the identical log event is transmitted again, LogHealth safely ignores the duplicate and increments the `duplicates` counter in the response.
+3. Legitimate repeated errors (e.g., multiple connection timeouts at different seconds) have different timestamps and are **always preserved**.
 
 ---
 
@@ -154,18 +153,40 @@ To prevent duplicate database records during network retries or re-scanned log f
 
 ---
 
-## 7. Recommended Retry and Failure Handling Strategy
+## 7. Report Export Endpoint
 
-When integrating the Log Parser client:
-1. **Transient Network Errors (502, 503, 504, Connection Reset):**
-   - Implement exponential backoff with jitter (e.g., retry after 1s, 2s, 4s, up to 3 attempts).
-2. **Client Validation Errors (400 Bad Request):**
-   - Log the rejection details returned in the `errors` array. Do not retry without modifying the payload.
-3. **Authentication Errors (401 Unauthorized):**
-   - Verify that your client's API Key matches the `API_KEY` setting in ErrorInsight's `.env`.
+### `GET /api/report`
+
+Generates an executive system health report containing overall score, component breakdown, detected anomalies, and prioritized risks.
+
+- **Query Parameters**:
+  - `format`: `json` (default) or `markdown`
+  - `download`: `1` (triggers file download attachment `loghealth_executive_report.md`)
+
+#### Example JSON Response:
+```json
+{
+  "status": "success",
+  "report": {
+    "title": "LogHealth Executive System Health Report",
+    "generated_at": "2026-10-29 13:00:00",
+    "sections": {
+      "executive_summary": "System Health Status: FAIR (Health Score: 78/100)...",
+      "health_assessment": { ... },
+      "component_health": [ ... ],
+      "anomalies": [ ... ],
+      "prioritized_risks": [ ... ]
+    }
+  }
+}
+```
 
 ---
 
 ## 8. Python Client Example
 
-A complete, runnable Python client (`sample_parser_client.py`) is provided in the repository root. See the next section or run `python sample_parser_client.py` for a live demonstration.
+A complete, runnable Python client (`sample_parser_client.py`) is provided in the repository root. Run:
+```bash
+python sample_parser_client.py
+```
+This tests server connectivity, transmits sample log events, and validates idempotency protection.

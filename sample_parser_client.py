@@ -1,6 +1,6 @@
 """
-Sample Log Parser Client for ErrorInsight.
-Demonstrates how an external Log Parser project integrates with ErrorInsight
+Sample Log Ingestion Client for LogHealth.
+Demonstrates how an external log collector or parser integrates with LogHealth
 using Python and the `requests` library.
 
 Run locally:
@@ -13,20 +13,21 @@ import time
 from datetime import datetime
 import requests
 
-# Base configuration
-BASE_URL = os.environ.get("ERRORINSIGHT_URL", "http://127.0.0.1:5000")
+# Base configuration (backward-compatible with ERRORINSIGHT_URL)
+BASE_URL = os.environ.get("LOGHEALTH_URL", os.environ.get("ERRORINSIGHT_URL", "http://127.0.0.1:5000"))
 API_KEY = os.environ.get("API_KEY", "dev-secret-key-12345")
 
 
 def check_backend_health() -> bool:
-    """Verify ErrorInsight backend availability before dispatching logs."""
+    """Verify LogHealth backend availability before dispatching logs."""
     health_url = f"{BASE_URL}/api/health"
-    print(f"\n[1/3] Checking backend health at {health_url}...")
+    print(f"\n[1/3] Checking LogHealth backend health at {health_url}...")
     try:
         response = requests.get(health_url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             print(f"  --> Connected successfully! Status: {data.get('status')}")
+            print(f"  --> Platform: {data.get('app', 'LogHealth')} v{data.get('version', '2.0.0')}")
             print(f"  --> Stored records currently in database: {data.get('stored_record_count')}")
             return True
         else:
@@ -34,13 +35,13 @@ def check_backend_health() -> bool:
             return False
     except requests.exceptions.RequestException as exc:
         print(f"  [!] Connection failed: {exc}")
-        print("  Ensure ErrorInsight is running locally (`python app.py`) on http://127.0.0.1:5000")
+        print("  Ensure LogHealth is running locally (`python app.py`) on http://127.0.0.1:5000")
         return False
 
 
-def send_parsed_logs(records, source_name="Friend_LogParser_v1.0", retries=3):
+def send_parsed_logs(records, source_name="External_LogCollector_v2.0", retries=3):
     """
-    Transmit parsed log records to ErrorInsight's POST /api/logs endpoint.
+    Transmit parsed log records to LogHealth's POST /api/logs endpoint.
     Handles authentication, payload wrapping, and exponential backoff.
     """
     endpoint = f"{BASE_URL}/api/logs"
@@ -86,16 +87,16 @@ def send_parsed_logs(records, source_name="Friend_LogParser_v1.0", retries=3):
 
 def main():
     print("=" * 70)
-    print("  ErrorInsight – Sample External Log Parser Integration Client")
+    print("  LogHealth – Sample Log Ingestion & System Health Client")
     print("=" * 70)
 
     # 1. Verify health
     healthy = check_backend_health()
     if not healthy:
-        print("\nAborting transmission: ErrorInsight backend is not reachable.")
+        print("\nAborting transmission: LogHealth backend is not reachable.")
         sys.exit(1)
 
-    # 2. Prepare sample parsed log records extracted by our parser
+    # 2. Prepare sample parsed log records extracted by collector
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     sample_records = [
         {
@@ -137,8 +138,8 @@ def main():
     result2 = send_parsed_logs(sample_records)
 
     print("\n" + "=" * 70)
-    print("Integration client test finished.")
-    print(f"View the live dashboard at: {BASE_URL}")
+    print("LogHealth integration client test finished.")
+    print(f"View the live system intelligence dashboard at: {BASE_URL}")
     print("=" * 70 + "\n")
 
 

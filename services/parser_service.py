@@ -1,7 +1,8 @@
 """
-Parser service for ErrorInsight.
+Parser service for LogHealth.
 Parses JSON (Format A and Format B) and plain-text log files into normalized record dictionaries.
 """
+
 
 from datetime import datetime
 import json

@@ -387,6 +387,150 @@ class ErrorInsightTestCase(unittest.TestCase):
         health = broken_db.check_health()
         self.assertFalse(health["connected"])
 
+    # 15. Health score calculation and explainability breakdown
+    def test_15_health_score_calculation_and_explainability(self):
+
+        from services.analytics_service import calculate_health_score
+
+        # Zero data case
+        zero_score = calculate_health_score(0, {}, {})
+        self.assertFalse(zero_score["has_sufficient_data"])
+        self.assertIsNone(zero_score["score"])
+        self.assertEqual(zero_score["status"], "Insufficient Data")
+
+        # Healthy case
+        healthy_score = calculate_health_score(
+            total_events=100,
+            severity_counts={"Critical": 0, "Error": 1, "Warning": 2, "Info": 97},
+            component_counts={"Application": 100}
+        )
+        self.assertTrue(healthy_score["has_sufficient_data"])
+        self.assertGreaterEqual(healthy_score["score"], 85)
+        self.assertIn("deductions", healthy_score)
+        self.assertIn("formula", healthy_score)
+
+        # Critical failure burst case
+        critical_score = calculate_health_score(
+            total_events=20,
+            severity_counts={"Critical": 8, "Error": 10, "Warning": 2, "Info": 0},
+            component_counts={"Database": 18, "Network": 2},
+            anomalies_count=2
+        )
+        self.assertEqual(critical_score["status"], "Critical")
+        self.assertLess(critical_score["score"], 50)
+
+    # 16. Component health and evidence-based risk ranking
+    def test_16_component_health_and_risk_ranking(self):
+        from services.analytics_service import calculate_component_health
+
+        sample_records = [
+            {"category": "Database", "severity": "Critical", "message": "Deadlock on table users"},
+            {"category": "Database", "severity": "Critical", "message": "Connection refused port 5432"},
+            {"category": "Database", "severity": "Error", "message": "Query failed timeout"},
+            {"category": "Network", "severity": "Warning", "message": "Socket slow"},
+            {"category": "Application", "severity": "Info", "message": "User login session active"}
+        ]
+        recurring = [{"category": "Database", "count": 2, "message": "Deadlock on table users"}]
+        components = calculate_component_health(sample_records, recurring)
+
+        self.assertEqual(len(components), 3)
+        # Database has 2 Criticals so it must be ranked first with Critical risk level
+        top_comp = components[0]
+        self.assertEqual(top_comp["component"], "Database")
+        self.assertEqual(top_comp["risk_level"], "Critical")
+        self.assertGreater(len(top_comp["evidence"]), 0)
+
+    # 17. Anomaly detection (Volume Spikes & Bursts)
+    def test_17_anomaly_detection(self):
+        from services.analytics_service import detect_anomalies
+
+        records = [
+            {"timestamp": "2026-10-29 08:15:00", "severity": "Critical", "category": "Database"},
+            {"timestamp": "2026-10-29 08:30:00", "severity": "Critical", "category": "Database"},
+            {"timestamp": "2026-10-29 09:00:00", "severity": "Info", "category": "Application"},
+        ]
+        timeline = [
+            {"time": "2026-10-29 06", "count": 1},
+            {"time": "2026-10-29 07", "count": 1},
+            {"time": "2026-10-29 08", "count": 25},  # Volume spike
+            {"time": "2026-10-29 09", "count": 2},
+        ]
+        anomalies = detect_anomalies(records, timeline, {"Database": 2, "Application": 1})
+        self.assertGreater(len(anomalies), 0)
+        types = [a["type"] for a in anomalies]
+        self.assertIn("Volume Spike", types)
+
+    # 18. Historical comparison logic
+    def test_18_historical_comparison(self):
+        from services.analytics_service import compare_with_history
+
+        current = [
+            {"message": "New database connection error", "category": "Database"}
+        ]
+        history = [
+            {"message": "Old warning socket timeout", "category": "Network"},
+            {"message": "Old database slow query", "category": "Database"},
+            {"message": "New database connection error", "category": "Database"}
+        ]
+
+        # Baseline comparison
+        comp = compare_with_history(current, history)
+        self.assertTrue(comp["has_baseline"])
+        self.assertIn("New database connection error", comp["new_signatures"])
+        self.assertIn("Old warning socket timeout", comp["resolved_signatures"])
+
+        # No baseline comparison
+        no_base = compare_with_history(current, [])
+        self.assertFalse(no_base["has_baseline"])
+
+    # 19. Health report generation endpoint
+    def test_19_health_report_generation(self):
+        # Seed some data first
+        seed_data = {
+            "errors": [
+                {
+                    "timestamp": "2026-10-29 10:00:00",
+                    "type": "Database",
+                    "message": "Connection pool full",
+                    "severity": "Critical"
+                }
+            ]
+        }
+        self.client.post("/api/analyze", data=json.dumps(seed_data), content_type="application/json")
+
+        # Test JSON format
+        res_json = self.client.get("/api/report")
+        self.assertEqual(res_json.status_code, 200)
+        json_data = res_json.get_json()
+        self.assertEqual(json_data["status"], "success")
+        self.assertIn("report", json_data)
+        self.assertIn("overall_health_score", json_data["report"])
+        self.assertIn("markdown", json_data["report"])
+
+        # Test Markdown download
+        res_md = self.client.get("/api/report?format=markdown&download=1")
+        self.assertEqual(res_md.status_code, 200)
+        self.assertIn(b"# LogHealth", res_md.data)
+        self.assertIn("attachment", res_md.headers.get("Content-Disposition", ""))
+
+    # 20. Empty and malformed inputs handling
+    def test_20_empty_and_malformed_inputs_handling(self):
+        # Empty JSON array
+        res_empty = self.client.post("/api/analyze", data=json.dumps([]), content_type="application/json")
+        self.assertEqual(res_empty.status_code, 400)
+
+        # Empty body
+        res_none = self.client.post("/api/analyze", data="", content_type="application/json")
+        self.assertEqual(res_none.status_code, 400)
+
+        # Analytics endpoint with empty database produces neutral health score without crashing
+        res_analytics = self.client.get("/api/analytics")
+        self.assertEqual(res_analytics.status_code, 200)
+        data = res_analytics.get_json()
+        self.assertEqual(data["status"], "success")
+        self.assertIn("health_score", data["analytics"])
+
 
 if __name__ == "__main__":
     unittest.main()
+

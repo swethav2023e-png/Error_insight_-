@@ -1,12 +1,13 @@
 /**
- * ErrorInsight – Intelligent Error Analyzer
+ * LogHealth – Log Analytics and System Health Intelligence
  * Frontend Dashboard Application Logic
  */
 
 // State Management
 const state = {
-    activeTab: 'dashboard',
-    apiKey: localStorage.getItem('errorinsight_api_key') || 'dev-secret-key-12345',
+    activeTab: 'overview',
+    apiKey: localStorage.getItem('loghealth_api_key') || localStorage.getItem('errorinsight_api_key') || 'dev-secret-key-12345',
+    lastAnalytics: null,
     history: {
         page: 1,
         limit: 15,
@@ -99,23 +100,29 @@ function initNavigation() {
 
     $('btn-view-all-history')?.addEventListener('click', () => switchTab('history'));
     $('btn-quick-upload')?.addEventListener('click', () => switchTab('upload'));
+    $('btn-view-all-components')?.addEventListener('click', () => switchTab('components'));
+    $('btn-banner-view-anomalies')?.addEventListener('click', () => switchTab('anomalies'));
+    $('btn-hero-view-report')?.addEventListener('click', () => switchTab('reports'));
 
     // Check URL hash on page load
     const hash = window.location.hash.replace('#', '');
-    if (['dashboard', 'upload', 'history', 'analytics', 'docs', 'settings'].includes(hash)) {
-        switchTab(hash);
+    const validTabs = ['overview', 'dashboard', 'analytics', 'components', 'anomalies', 'risks', 'history', 'reports', 'upload', 'docs', 'settings'];
+    if (validTabs.includes(hash)) {
+        switchTab(hash === 'dashboard' ? 'overview' : hash);
     } else {
-        switchTab('dashboard');
+        switchTab('overview');
     }
 }
 
 function switchTab(tabName) {
+    if (tabName === 'dashboard') tabName = 'overview';
     state.activeTab = tabName;
     window.location.hash = tabName;
 
     // Update active nav link
     document.querySelectorAll('.nav-link').forEach(link => {
-        if (link.getAttribute('data-tab') === tabName) {
+        const linkTab = link.getAttribute('data-tab');
+        if (linkTab === tabName || (tabName === 'overview' && linkTab === 'dashboard')) {
             link.classList.add('active');
         } else {
             link.classList.remove('active');
@@ -124,7 +131,7 @@ function switchTab(tabName) {
 
     // Update active content view
     document.querySelectorAll('.content-view').forEach(view => {
-        if (view.id === `view-${tabName}`) {
+        if (view.id === `view-${tabName}` || (tabName === 'overview' && view.id === 'view-dashboard')) {
             view.classList.add('active');
         } else {
             view.classList.remove('active');
@@ -133,24 +140,37 @@ function switchTab(tabName) {
 
     // Update topbar breadcrumb title
     const titles = {
-        dashboard: 'System Dashboard',
-        upload: 'Log Upload & Ingestion',
-        history: 'Stored Error History',
-        analytics: 'Subsystem Analytics',
+        overview: 'System Health Overview',
+        dashboard: 'System Health Overview',
+        analytics: 'Log Analytics & Trends',
+        components: 'Component & Service Health',
+        anomalies: 'Anomaly & Pattern Detection',
+        risks: 'Evidence-Based Risk Prioritization',
+        history: 'Stored Log History',
+        reports: 'System Health Intelligence Report',
+        upload: 'Log Ingestion & Upload',
         docs: 'API Integration Contract',
         settings: 'System & Database Settings'
     };
     if ($('current-view-title')) {
-        $('current-view-title').textContent = titles[tabName] || 'Dashboard';
+        $('current-view-title').textContent = titles[tabName] || 'Overview';
     }
 
     // Refresh view-specific content
-    if (tabName === 'dashboard') {
+    if (tabName === 'overview') {
         loadDashboardData();
-    } else if (tabName === 'history') {
-        loadHistoryData();
     } else if (tabName === 'analytics') {
         loadAnalyticsView();
+    } else if (tabName === 'components') {
+        renderComponentHealthView();
+    } else if (tabName === 'anomalies') {
+        renderAnomaliesView();
+    } else if (tabName === 'risks') {
+        renderRisksView();
+    } else if (tabName === 'history') {
+        loadHistoryData();
+    } else if (tabName === 'reports') {
+        renderReportsView();
     } else if (tabName === 'settings') {
         checkHealth();
     }
@@ -164,10 +184,10 @@ async function checkHealth() {
         const data = await apiFetch('/api/health');
         if (data.status === 'healthy') {
             const count = data.stored_record_count ?? 0;
-            $('db-indicator-dot').className = 'db-indicator-dot';
-            $('db-status-text').textContent = `SQLite: Connected (${count} records)`;
-            $('sidebar-status-dot').className = 'status-dot pulsing';
-            $('sidebar-db-summary').textContent = `SQLite: ${count} errors stored`;
+            if ($('db-indicator-dot')) $('db-indicator-dot').className = 'db-indicator-dot';
+            if ($('db-status-text')) $('db-status-text').textContent = `SQLite: Connected (${count} records)`;
+            if ($('sidebar-status-dot')) $('sidebar-status-dot').className = 'status-dot pulsing';
+            if ($('sidebar-db-summary')) $('sidebar-db-summary').textContent = `SQLite: ${count} events stored`;
 
             if ($('settings-db-count')) {
                 $('settings-db-count').textContent = `${count} records`;
@@ -177,10 +197,10 @@ async function checkHealth() {
             }
         }
     } catch (err) {
-        $('db-indicator-dot').className = 'db-indicator-dot error';
-        $('db-status-text').textContent = 'SQLite: Disconnected';
-        $('sidebar-status-dot').className = 'status-dot error';
-        $('sidebar-db-summary').textContent = 'Database Unavailable';
+        if ($('db-indicator-dot')) $('db-indicator-dot').className = 'db-indicator-dot error';
+        if ($('db-status-text')) $('db-status-text').textContent = 'SQLite: Disconnected';
+        if ($('sidebar-status-dot')) $('sidebar-status-dot').className = 'status-dot error';
+        if ($('sidebar-db-summary')) $('sidebar-db-summary').textContent = 'Database Unavailable';
     }
 }
 
@@ -190,7 +210,7 @@ async function checkHealth() {
 function renderCharts(chartData) {
     if (typeof Chart === 'undefined') return;
 
-    // 1. Category Bar Chart
+    // 1. Category / Component Bar Chart
     const catCanvas = $('categoryChart');
     if (catCanvas && chartData?.categories) {
         if (state.charts.category) {
@@ -201,10 +221,10 @@ function renderCharts(chartData) {
         state.charts.category = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: chartData.categories.labels,
+                labels: chartData.categories.labels.length ? chartData.categories.labels : ['No Component Data'],
                 datasets: [{
-                    label: 'Errors Recorded',
-                    data: chartData.categories.data,
+                    label: 'Events Logged',
+                    data: chartData.categories.data.length ? chartData.categories.data : [0],
                     backgroundColor: chartData.categories.colors.map(c => `${c}cc`),
                     borderColor: chartData.categories.colors,
                     borderWidth: 1.5,
@@ -247,13 +267,15 @@ function renderCharts(chartData) {
         }
 
         const ctx = sevCanvas.getContext('2d');
+        const hasData = chartData.severities.data.length > 0 && chartData.severities.data.some(v => v > 0);
+
         state.charts.severity = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: chartData.severities.labels,
+                labels: hasData ? chartData.severities.labels : ['No Events'],
                 datasets: [{
-                    data: chartData.severities.data,
-                    backgroundColor: chartData.severities.colors,
+                    data: hasData ? chartData.severities.data : [1],
+                    backgroundColor: hasData ? chartData.severities.colors : ['#334155'],
                     borderColor: '#0f172a',
                     borderWidth: 3,
                     hoverOffset: 6
@@ -293,9 +315,9 @@ function renderCharts(chartData) {
         state.charts.timeline = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: chartData.timeline.labels.length ? chartData.timeline.labels : ['No data'],
+                labels: chartData.timeline.labels.length ? chartData.timeline.labels : ['No baseline'],
                 datasets: [{
-                    label: 'Error Volume',
+                    label: 'Event Velocity',
                     data: chartData.timeline.data.length ? chartData.timeline.data : [0],
                     borderColor: '#06b6d4',
                     backgroundColor: gradient,
@@ -336,55 +358,80 @@ function renderCharts(chartData) {
 }
 
 // ==========================================================================
-// DASHBOARD DATA LOADING
+// DASHBOARD & OVERVIEW DATA LOADING
 // ==========================================================================
 async function loadDashboardData() {
     checkHealth();
     try {
         const response = await apiFetch('/api/analytics');
         const analytics = response.analytics || {};
+        state.lastAnalytics = analytics;
 
-        // 1. Update 5 Summary Stat Cards
-        const total = analytics.total_errors ?? 0;
-        const categories = analytics.unique_categories ?? 0;
+        // 1. Update Metric Cards
+        const total = analytics.total_events ?? analytics.total_errors ?? 0;
         const critical = analytics.critical_count ?? 0;
+        const errors = analytics.error_count ?? 0;
         const warning = analytics.warning_count ?? 0;
         const info = analytics.info_count ?? 0;
 
-        $('stat-total').textContent = total;
-        $('stat-categories').textContent = categories;
-        $('stat-critical').textContent = critical;
-        $('stat-warning').textContent = warning;
-        $('stat-info').textContent = info;
+        if ($('stat-total')) $('stat-total').textContent = total;
+        if ($('stat-critical')) $('stat-critical').textContent = critical;
+        if ($('stat-errors')) $('stat-errors').textContent = errors;
+        if ($('stat-warning')) $('stat-warning').textContent = warning;
+        if ($('stat-info')) $('stat-info').textContent = info;
 
-        // 2. Update System Health Hero Badge
+        // 2. Update Explainable Health Score
+        const hs = analytics.health_score || {};
+        const scoreVal = hs.score;
         const healthBadge = $('system-health-badge');
-        if (total === 0) {
-            healthBadge.textContent = 'NO DATA';
-            healthBadge.className = 'badge-value';
-        } else if (critical > 0) {
-            healthBadge.textContent = `${critical} CRITICAL`;
-            healthBadge.className = 'badge-value critical';
-        } else if (warning > 0) {
-            healthBadge.textContent = `${warning} WARNINGS`;
-            healthBadge.className = 'badge-value warning';
-        } else {
-            healthBadge.textContent = 'HEALTHY';
-            healthBadge.className = 'badge-value';
+        const scoreElem = $('health-score-val');
+
+        if (scoreElem) {
+            scoreElem.textContent = scoreVal !== null && scoreVal !== undefined ? scoreVal : '—';
         }
 
-        // 3. Render Chart.js Visualizations
+        if (healthBadge) {
+            if (!hs.has_sufficient_data || total === 0) {
+                healthBadge.textContent = 'NO DATA';
+                healthBadge.className = 'badge-value';
+            } else {
+                healthBadge.textContent = hs.status.toUpperCase();
+                healthBadge.className = `badge-value ${hs.status.toLowerCase()}`;
+            }
+        }
+
+        if ($('hero-summary-text') && analytics.plain_english_summary) {
+            $('hero-summary-text').textContent = analytics.plain_english_summary;
+        }
+
+        // 3. Render Charts
         if (analytics.chart_data) {
             renderCharts(analytics.chart_data);
         }
 
-        // 4. Render Top Recurring Errors
+        // 4. Anomaly Banner
+        const anomalyBanner = $('overview-anomaly-banner');
+        const anomalies = analytics.anomalies || [];
+        if (anomalyBanner) {
+            if (anomalies.length > 0) {
+                anomalyBanner.classList.remove('hidden');
+                $('anomaly-banner-title').textContent = `${anomalies.length} Statistical Anomalies Detected`;
+                $('anomaly-banner-text').textContent = anomalies[0].observed_fact;
+            } else {
+                anomalyBanner.classList.add('hidden');
+            }
+        }
+
+        // 5. Component Quick Matrix
+        renderOverviewComponentTable(analytics.component_health || []);
+
+        // 6. Top Recurring Signatures
         renderRecurringErrors(analytics.recurring_errors || []);
 
-        // 5. Render Smart Recommendations
+        // 7. Operational Recommendations
         renderRecommendations(analytics.recommendations || []);
 
-        // 6. Render Recent Errors Table
+        // 8. Recent Log Records
         renderRecentErrorsTable(analytics.recent_errors || []);
 
     } catch (err) {
@@ -392,12 +439,34 @@ async function loadDashboardData() {
     }
 }
 
+function renderOverviewComponentTable(components) {
+    const tbody = $('overview-component-body');
+    if (!tbody) return;
+
+    if (!components.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No component telemetry available. Ingest logs to analyze.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = components.slice(0, 6).map(c => `
+        <tr>
+            <td><b>${escapeHTML(c.component)}</b></td>
+            <td><code>${c.total_events}</code></td>
+            <td><span class="severity-pill ${c.critical_count > 0 ? 'Critical' : 'Info'}">${c.critical_count}</span></td>
+            <td><span class="text-orange">${c.error_count}</span></td>
+            <td>${c.failure_rate}%</td>
+            <td><span class="risk-badge ${c.risk_level.toLowerCase()}">${escapeHTML(c.risk_level)}</span></td>
+            <td class="table-msg-cell">${escapeHTML(c.evidence[0] || 'Nominal')}</td>
+        </tr>
+    `).join('');
+}
+
 function renderRecurringErrors(recurringList) {
     const container = $('recurring-errors-list');
     if (!container) return;
 
     if (!recurringList.length) {
-        container.innerHTML = '<div class="loading-state">No recurring errors recorded in database.</div>';
+        container.innerHTML = '<div class="loading-state">No recurring failure patterns recorded in database.</div>';
         return;
     }
 
@@ -423,7 +492,7 @@ function renderRecommendations(recommendations) {
     if (!container) return;
 
     if (!recommendations.length) {
-        container.innerHTML = '<div class="loading-state">Upload or stream logs to generate rule-based suggestions.</div>';
+        container.innerHTML = '<div class="loading-state">Ingest logs to generate operational recommendations.</div>';
         return;
     }
 
@@ -449,7 +518,7 @@ function renderRecentErrorsTable(recentList) {
     if (!tbody) return;
 
     if (!recentList.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No error records currently stored.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No log records currently stored in SQLite.</td></tr>';
         return;
     }
 
@@ -469,7 +538,268 @@ function renderRecentErrorsTable(recentList) {
 }
 
 // ==========================================================================
-// LOG UPLOAD & INGESTION
+// COMPONENT HEALTH VIEW
+// ==========================================================================
+async function renderComponentHealthView() {
+    if (!state.lastAnalytics) {
+        await loadDashboardData();
+    }
+    const components = state.lastAnalytics?.component_health || [];
+    const tbody = $('full-component-body');
+    if (!tbody) return;
+
+    if (!components.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4">No component telemetry available. Ingest logs to analyze.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = components.map(c => `
+        <tr>
+            <td><b>${escapeHTML(c.component)}</b></td>
+            <td><code>${c.total_events}</code></td>
+            <td><span class="severity-pill ${c.critical_count > 0 ? 'Critical' : 'Info'}">${c.critical_count}</span></td>
+            <td><span class="text-orange">${c.error_count}</span></td>
+            <td><span class="text-warning">${c.warning_count}</span></td>
+            <td>${c.failure_rate}%</td>
+            <td><code>${c.risk_score}</code></td>
+            <td><span class="risk-badge ${c.risk_level.toLowerCase()}">${escapeHTML(c.risk_level)}</span></td>
+            <td class="table-msg-cell">${escapeHTML(c.evidence.join('; '))}</td>
+            <td class="table-msg-cell">${escapeHTML(c.recommended_actions[0] || 'Monitor')}</td>
+        </tr>
+    `).join('');
+}
+
+// ==========================================================================
+// ANOMALIES VIEW
+// ==========================================================================
+async function renderAnomaliesView() {
+    if (!state.lastAnalytics) {
+        await loadDashboardData();
+    }
+    const anomalies = state.lastAnalytics?.anomalies || [];
+    const container = $('anomalies-list');
+    if (!container) return;
+
+    if (!anomalies.length) {
+        container.innerHTML = '<div class="loading-state">No statistical volume spikes or critical bursts detected in active dataset.</div>';
+    } else {
+        container.innerHTML = anomalies.map(a => `
+            <div class="anomaly-card">
+                <div class="anomaly-card-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="anomaly-type-tag ${a.severity.toLowerCase()}">${escapeHTML(a.type)}</span>
+                        <span style="font-size:12px;color:#94a3b8">Bucket: <code>${escapeHTML(a.time_bucket)}</code></span>
+                    </div>
+                    <span class="recurring-count-pill">${a.event_count} events</span>
+                </div>
+                <div class="anomaly-fact-box">
+                    <strong>Observed Fact:</strong> ${escapeHTML(a.observed_fact)}
+                </div>
+                <div class="anomaly-suspected-box">
+                    <strong>Suspected Cause:</strong> ${escapeHTML(a.suspected_cause)}
+                </div>
+                <div class="anomaly-rec-box">
+                    <strong>Action:</strong> ${escapeHTML(a.recommendation)}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Also populate recurring error patterns table in anomalies view
+    const recurBody = $('analytics-recurring-body');
+    const recurList = state.lastAnalytics?.recurring_errors || [];
+    if (recurBody) {
+        if (!recurList.length) {
+            recurBody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No recurring patterns detected.</td></tr>';
+        } else {
+            recurBody.innerHTML = recurList.map(item => `
+                <tr>
+                    <td><span class="recurring-count-pill">${item.count}× occurrences</span></td>
+                    <td><b>${escapeHTML(item.category)}</b></td>
+                    <td><span class="severity-pill ${escapeHTML(item.severity)}">${escapeHTML(item.severity)}</span></td>
+                    <td class="table-msg-cell" title="${escapeHTML(item.message)}">${escapeHTML(item.message)}</td>
+                    <td>${escapeHTML(item.last_seen || 'Recently')}</td>
+                </tr>
+            `).join('');
+        }
+    }
+}
+
+// ==========================================================================
+// RISK ASSESSMENT VIEW
+// ==========================================================================
+async function renderRisksView() {
+    if (!state.lastAnalytics) {
+        await loadDashboardData();
+    }
+    const risks = state.lastAnalytics?.prioritized_risks || [];
+    const container = $('risks-list');
+    if (!container) return;
+
+    if (!risks.length) {
+        container.innerHTML = '<div class="loading-state">No critical or high-priority operational risks identified.</div>';
+        return;
+    }
+
+    container.innerHTML = risks.map(rk => `
+        <div class="risk-card ${rk.risk_level.toLowerCase()}">
+            <div class="risk-header">
+                <span class="risk-title">${escapeHTML(rk.title)}</span>
+                <span class="risk-badge ${rk.risk_level.toLowerCase()}">${escapeHTML(rk.risk_level)} RISK</span>
+            </div>
+            <div class="risk-body">
+                <div class="risk-impact">
+                    <strong>Operational Impact:</strong> ${escapeHTML(rk.why_it_matters)}
+                </div>
+                <div class="risk-evidence">
+                    <strong>Evidence:</strong> ${escapeHTML(rk.evidence)}
+                </div>
+                ${rk.recommended_actions?.length ? `
+                    <div style="font-size:12px;color:#38bdf8;margin-top:4px;">
+                        <strong>Action:</strong> ${escapeHTML(rk.recommended_actions[0])}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+// ==========================================================================
+// HEALTH REPORTS VIEW
+// ==========================================================================
+async function renderReportsView() {
+    const reportBody = $('report-content-body');
+    if (!reportBody) return;
+
+    try {
+        reportBody.innerHTML = '<div class="loading-state">Compiling system health report from active database telemetry...</div>';
+        const res = await apiFetch('/api/report');
+        const report = res.report || {};
+
+        $('report-timestamp').textContent = report.generated_at || 'Just now';
+        $('report-status-badge').textContent = (report.status || 'REPORT GENERATED').toUpperCase();
+        $('report-status-badge').className = `report-status-badge ${(report.status || 'healthy').toLowerCase()}`;
+
+        // Convert simple markdown lines to formatted HTML for preview
+        const mdText = report.markdown || '';
+        reportBody.innerHTML = formatMarkdownToHTML(mdText);
+
+    } catch (err) {
+        reportBody.innerHTML = `<div class="loading-state text-critical">Failed to compile report: ${escapeHTML(err.message)}</div>`;
+    }
+}
+
+function formatMarkdownToHTML(md) {
+    if (!md) return '<p>No report content available.</p>';
+    const lines = md.split('\n');
+    let html = '';
+    let inTable = false;
+
+    lines.forEach(line => {
+        line = line.trim();
+        if (line.startsWith('# ')) {
+            html += `<h1>${escapeHTML(line.substring(2))}</h1>`;
+        } else if (line.startsWith('## ')) {
+            html += `<h2>${escapeHTML(line.substring(3))}</h2>`;
+        } else if (line.startsWith('### ')) {
+            html += `<h3>${escapeHTML(line.substring(4))}</h3>`;
+        } else if (line.startsWith('|')) {
+            const cells = line.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim());
+            if (cells.every(c => c.startsWith('---') || c.startsWith(':---'))) {
+                // separator line
+                return;
+            }
+            if (!inTable) {
+                html += '<table>';
+                inTable = true;
+            }
+            html += `<tr>${cells.map(c => `<td>${escapeHTML(c)}</td>`).join('')}</tr>`;
+        } else {
+            if (inTable) {
+                html += '</table>';
+                inTable = false;
+            }
+            if (line.startsWith('- ')) {
+                html += `<ul><li>${escapeHTML(line.substring(2))}</li></ul>`;
+            } else if (line === '---') {
+                html += '<hr>';
+            } else if (line) {
+                html += `<p>${escapeHTML(line)}</p>`;
+            }
+        }
+    });
+
+    if (inTable) html += '</table>';
+    return html;
+}
+
+// ==========================================================================
+// ANALYTICS VIEW
+// ==========================================================================
+async function loadAnalyticsView() {
+    try {
+        const response = await apiFetch('/api/analytics');
+        const analytics = response.analytics || {};
+        state.lastAnalytics = analytics;
+
+        if ($('analytics-total-count')) {
+            $('analytics-total-count').textContent = `${analytics.total_events ?? 0} Events Analyzed`;
+        }
+
+        if (analytics.chart_data) {
+            renderCharts(analytics.chart_data);
+        }
+
+        // Historical comparison
+        const comp = analytics.historical_comparison || {};
+        if ($('comparison-description')) {
+            $('comparison-description').textContent = comp.message || 'No historical comparison available.';
+        }
+        const tagsContainer = $('comparison-tags');
+        if (tagsContainer) {
+            let tags = [];
+            if (comp.has_baseline) {
+                tags.push(`<span class="comp-tag">Volume Δ: ${comp.delta_volume_percent > 0 ? '+' : ''}${comp.delta_volume_percent}%</span>`);
+                if (comp.new_signatures_count) {
+                    tags.push(`<span class="comp-tag text-warning">${comp.new_signatures_count} new error signatures</span>`);
+                }
+                if (comp.resolved_signatures_count) {
+                    tags.push(`<span class="comp-tag text-healthy">${comp.resolved_signatures_count} resolved signatures</span>`);
+                }
+            } else {
+                tags.push('<span class="comp-tag">Initial Session</span>');
+            }
+            tagsContainer.innerHTML = tags.join('');
+        }
+
+        // Subsystems Matrix
+        const catCounts = analytics.category_counts || {};
+        const categories = [
+            'Database', 'Authentication', 'Network', 'File System', 'Memory', 'API & Backend', 'Background Jobs', 'Infrastructure', 'Application'
+        ];
+
+        const grid = $('analytics-category-grid');
+        if (grid) {
+            grid.innerHTML = categories.map(cat => {
+                const count = catCounts[cat] || 0;
+                return `
+                    <div class="analytics-category-card">
+                        <div class="acc-header">
+                            <span class="acc-title">${cat}</span>
+                            <span class="category-pill">${count > 0 ? 'ACTIVE' : 'IDLE'}</span>
+                        </div>
+                        <div class="acc-count">${count} <small style="font-size:11px;color:#94a3b8">events</small></div>
+                    </div>
+                `;
+            }).join('');
+        }
+    } catch (err) {
+        showToast(`Analytics query error: ${err.message}`, 'error');
+    }
+}
+
+// ==========================================================================
+// LOG INGESTION & UPLOAD
 // ==========================================================================
 function initUploadHandlers() {
     const dropzone = $('upload-dropzone');
@@ -512,9 +842,8 @@ function initUploadHandlers() {
 
         try {
             btnAnalyzeRaw.disabled = true;
-            btnAnalyzeRaw.innerHTML = '<span>Processing...</span>';
+            btnAnalyzeRaw.innerHTML = '<span>Processing Telemetry...</span>';
 
-            // Check if valid JSON
             let isJson = false;
             let jsonPayload = null;
             if (text.startsWith('{') || text.startsWith('[')) {
@@ -543,7 +872,8 @@ function initUploadHandlers() {
 
             showUploadFeedback(response);
             checkHealth();
-            showToast(`Analyzed successfully: ${response.saved_to_database} saved to SQLite!`, 'success');
+            showToast(`Ingested successfully: ${response.saved_to_database} records saved!`, 'success');
+            loadDashboardData();
         } catch (err) {
             showUploadFeedback({ error: err.message }, true);
             showToast(`Analysis failed: ${err.message}`, 'error');
@@ -562,7 +892,8 @@ function initUploadHandlers() {
             const data = await apiFetch('/api/seed', { method: 'POST' });
             showToast(data.message, 'success');
             checkHealth();
-            switchTab('dashboard');
+            loadDashboardData();
+            switchTab('overview');
         } catch (err) {
             showToast(`Seed failed: ${err.message}`, 'error');
         }
@@ -616,6 +947,7 @@ async function handleFileUpload(file) {
         showUploadFeedback(response);
         checkHealth();
         showToast(`${file.name}: ${response.saved_to_database} records saved!`, 'success');
+        loadDashboardData();
     } catch (err) {
         showUploadFeedback({ error: err.message }, true);
         showToast(`Upload error: ${err.message}`, 'error');
@@ -629,11 +961,11 @@ function showUploadFeedback(data, isError = false) {
     feedback.classList.remove('hidden');
     if (isError) {
         feedback.className = 'upload-feedback-box error';
-        feedback.innerHTML = `<strong>Upload Failure:</strong> ${escapeHTML(data.error || 'Unknown error occurred.')}`;
+        feedback.innerHTML = `<strong>Ingestion Failure:</strong> ${escapeHTML(data.error || 'Unknown error occurred.')}`;
     } else {
         feedback.className = 'upload-feedback-box success';
         feedback.innerHTML = `
-            <strong>Analysis Complete:</strong> File <code>${escapeHTML(data.source_name)}</code> processed successfully.<br>
+            <strong>Ingestion Complete:</strong> File <code>${escapeHTML(data.source_name)}</code> processed successfully.<br>
             • <b>${data.saved_to_database}</b> new record(s) persisted to SQLite.<br>
             • <b>${data.duplicates}</b> duplicate record(s) safely ignored.<br>
             • <b>${data.rejected}</b> rejected invalid record(s).
@@ -758,7 +1090,6 @@ async function loadHistoryData() {
             `).join('');
         }
 
-        // Update pagination bar
         const startIdx = records.length ? (state.history.page - 1) * state.history.limit + 1 : 0;
         const endIdx = (state.history.page - 1) * state.history.limit + records.length;
         $('pagination-info').textContent = `Showing ${startIdx}-${endIdx} of ${pagination.total_records} records`;
@@ -791,14 +1122,12 @@ window.inspectErrorRecord = async function(id) {
         $('modal-timestamp').textContent = rec.timestamp || '—';
         $('modal-severity').innerHTML = `<span class="severity-pill ${escapeHTML(rec.severity)}">${escapeHTML(rec.severity)}</span>`;
         $('modal-category').textContent = rec.category.toUpperCase();
-        $('modal-title').textContent = `${rec.category} Error Inspection`;
+        $('modal-title').textContent = `${rec.category} Event Details`;
         $('modal-message').textContent = rec.message || '';
 
-        // Causes
         const causesList = $('modal-causes-list');
         causesList.innerHTML = (recommendation.possible_causes || []).map(c => `<li>${escapeHTML(c)}</li>`).join('');
 
-        // Solutions
         const solutionsList = $('modal-solutions-list');
         solutionsList.innerHTML = (recommendation.recommended_solutions || []).map(s => `<li>${escapeHTML(s)}</li>`).join('');
 
@@ -819,57 +1148,55 @@ function initModalHandlers() {
     closeBtn?.addEventListener('click', closeModal);
     dismissBtn?.addEventListener('click', closeModal);
     backdrop?.addEventListener('click', closeModal);
+
+    // Formula Modal
+    const formulaModal = $('formula-modal');
+    const btnExplain = $('btn-explain-formula');
+    const formulaClose = $('formula-modal-close');
+    const formulaDismiss = $('formula-btn-dismiss');
+    const formulaBackdrop = $('formula-backdrop');
+
+    const openFormula = () => {
+        if (!formulaModal) return;
+        const hs = state.lastAnalytics?.health_score;
+        const ded = hs?.deductions || {};
+
+        if ($('fb-critical-deduction')) $('fb-critical-deduction').textContent = `-${ded.critical_deduction ?? 0.0}`;
+        if ($('fb-error-deduction')) $('fb-error-deduction').textContent = `-${ded.error_deduction ?? 0.0}`;
+        if ($('fb-warning-deduction')) $('fb-warning-deduction').textContent = `-${ded.warning_deduction ?? 0.0}`;
+        if ($('fb-anomaly-deduction')) $('fb-anomaly-deduction').textContent = `-${ded.anomaly_deduction ?? 0.0}`;
+        if ($('fb-concentration-deduction')) $('fb-concentration-deduction').textContent = `-${ded.concentration_deduction ?? 0.0}`;
+        if ($('fb-final-score')) $('fb-final-score').textContent = `${ded.final_score ?? '—'} / 100`;
+
+        formulaModal.classList.remove('hidden');
+    };
+
+    const closeFormula = () => formulaModal?.classList.add('hidden');
+
+    btnExplain?.addEventListener('click', openFormula);
+    formulaClose?.addEventListener('click', closeFormula);
+    formulaDismiss?.addEventListener('click', closeFormula);
+    formulaBackdrop?.addEventListener('click', closeFormula);
 }
 
 // ==========================================================================
-// ANALYTICS VIEW
+// REPORT EXPORT ACTIONS
 // ==========================================================================
-async function loadAnalyticsView() {
-    try {
-        const response = await apiFetch('/api/analytics');
-        const analytics = response.analytics || {};
-        const catCounts = analytics.category_counts || {};
+function initReportActions() {
+    $('btn-download-report-md')?.addEventListener('click', () => {
+        window.location.href = '/api/report?format=markdown&download=1';
+    });
 
-        const categories = [
-            'Database', 'Authentication', 'Network', 'File System', 'Memory', 'Application'
-        ];
-
-        const grid = $('analytics-category-grid');
-        if (grid) {
-            grid.innerHTML = categories.map(cat => {
-                const count = catCounts[cat] || 0;
-                return `
-                    <div class="analytics-category-card">
-                        <div class="acc-header">
-                            <span class="acc-title">${cat}</span>
-                            <span class="category-pill">${count > 0 ? 'ACTIVE' : 'IDLE'}</span>
-                        </div>
-                        <div class="acc-count">${count} <small style="font-size:11px;color:#94a3b8">occurrences</small></div>
-                    </div>
-                `;
-            }).join('');
+    $('btn-copy-report-md')?.addEventListener('click', () => {
+        const mdText = state.lastAnalytics?.report?.markdown;
+        if (mdText) {
+            navigator.clipboard.writeText(mdText).then(() => {
+                showToast('Report Markdown copied to clipboard!', 'success');
+            });
+        } else {
+            showToast('Report content not loaded yet.', 'warning');
         }
-
-        const recurBody = $('analytics-recurring-body');
-        const recurList = analytics.recurring_errors || [];
-        if (recurBody) {
-            if (!recurList.length) {
-                recurBody.innerHTML = '<tr><td colspan="5" class="text-center py-4">No recurring patterns recorded.</td></tr>';
-            } else {
-                recurBody.innerHTML = recurList.map(item => `
-                    <tr>
-                        <td><span class="recurring-count-pill">${item.count}× occurrences</span></td>
-                        <td><b>${escapeHTML(item.category)}</b></td>
-                        <td><span class="severity-pill ${escapeHTML(item.severity)}">${escapeHTML(item.severity)}</span></td>
-                        <td class="table-msg-cell" title="${escapeHTML(item.message)}">${escapeHTML(item.message)}</td>
-                        <td>${escapeHTML(item.last_seen || '—')}</td>
-                    </tr>
-                `).join('');
-            }
-        }
-    } catch (err) {
-        showToast(`Analytics query error: ${err.message}`, 'error');
-    }
+    });
 }
 
 // ==========================================================================
@@ -962,7 +1289,7 @@ function initSettingsHandlers() {
     btnSaveKey?.addEventListener('click', () => {
         const val = apiKeyInput.value.trim();
         state.apiKey = val;
-        localStorage.setItem('errorinsight_api_key', val);
+        localStorage.setItem('loghealth_api_key', val);
         showToast('API Key saved for current session.', 'success');
     });
 
@@ -1000,7 +1327,7 @@ function initSettingsHandlers() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `error_insight_export_${new Date().toISOString().substring(0, 10)}.json`;
+            a.download = `loghealth_export_${new Date().toISOString().substring(0, 10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
             showToast('Export downloaded successfully!', 'success');
@@ -1018,6 +1345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initUploadHandlers();
     initHistoryControls();
     initModalHandlers();
+    initReportActions();
     initApiExplorer();
     initSettingsHandlers();
 
@@ -1026,15 +1354,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = $('btn-refresh');
         btn.classList.add('refreshing');
         checkHealth();
-        if (state.activeTab === 'dashboard') {
-            loadDashboardData();
-        } else if (state.activeTab === 'history') {
-            loadHistoryData();
-        } else if (state.activeTab === 'analytics') {
-            loadAnalyticsView();
-        }
+        loadDashboardData();
         setTimeout(() => btn.classList.remove('refreshing'), 600);
-        showToast('Dashboard refreshed from SQLite.', 'info');
+        showToast('Dashboard telemetry refreshed from SQLite.', 'info');
     });
 
     // Initial Health and Dashboard Load
