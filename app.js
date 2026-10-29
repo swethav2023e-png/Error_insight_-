@@ -16,5 +16,43 @@ function render(d){
 function message(t,bad=false){$("msg").textContent=t;$("msg").classList.remove("hidden");$("msg").style.color=bad?"#b42318":"#4f46c9";}
 async function demo(){try{const r=await fetch("/api/demo"),d=await r.json();render(d);message("Demo dataset loaded — dashboard updated.");}catch(e){message("Could not load demo data.",true)}}
 $("demo").onclick=demo;
-$("file").onchange=async e=>{const f=e.target.files[0];if(!f)return;const form=new FormData();form.append("file",f);try{const r=await fetch("/api/analyze",{method:"POST",body:form}),d=await r.json();if(!r.ok)throw Error(d.error);render(d);message(f.name+" analyzed successfully.");}catch(e){message(e.message,true)}};
-demo();
+
+$("file").onchange = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+
+    const form = new FormData();
+    form.append("file", f);
+
+    try {
+        const r = await fetch("/api/analyze", {
+            method: "POST",
+            body: form
+        });
+
+        const d = await r.json();
+
+        if (!r.ok) {
+            throw new Error(
+                d.error || `Request failed: ${r.status}`
+            );
+        }
+
+        render(d);
+
+        if (d.database_warning) {
+            message(
+                `Analysis succeeded, but database saving failed: ${d.database_warning}`,
+                true
+            );
+        } else {
+            message(
+                `${f.name} analyzed successfully. ` +
+                `${d.saved_to_database ?? 0} records saved to database.`
+            );
+        }
+
+    } catch (e) {
+        message(e.message || "Upload failed.", true);
+    }
+};

@@ -1,3 +1,9 @@
+# Environment & Local DB
+.env
+*.db
+test_*.db
+ErrorInsight_Project.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

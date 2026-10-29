@@ -1,0 +1,4 @@
+This is a random text file with no structured error entries.
+It does not contain any timestamps, log format prefixes, or valid JSON structure.
+Line 3 has nonsense content: !@#$%^&*()_+~`|}{[]:;?><,./
+Line 4 is just an empty declaration.
