@@ -1,0 +1,42 @@
+[
+  {
+    "timestamp": "2026-10-29 08:40:00",
+    "message": "Connection timeout while requesting authentication endpoint",
+    "severity": "Warning"
+  },
+  {
+    "timestamp": "2026-10-29 08:42:15",
+    "message": "Database query failed: syntax error in SQL statement near 'WHERE'",
+    "severity": "Error"
+  },
+  {
+    "timestamp": "2026-10-29 08:44:30",
+    "message": "Out of memory while processing image upload",
+    "severity": "Fatal"
+  },
+  {
+    "timestamp": "2026-10-29 08:46:12",
+    "message": "Permission denied accessing /etc/secrets/ssl_cert.pem",
+    "severity": "Error"
+  },
+  {
+    "timestamp": "2026-10-29 08:48:50",
+    "message": "User session token has expired, forcing re-authentication",
+    "severity": "Info"
+  },
+  {
+    "timestamp": "2026-10-29 08:50:22",
+    "message": "Socket connection reset by peer during file transfer",
+    "severity": "Warning"
+  },
+  {
+    "timestamp": "2026-10-29 08:52:00",
+    "message": "Unhandled exception: KeyError 'user_id' in session handler",
+    "severity": "Error"
+  },
+  {
+    "timestamp": "2026-10-29 08:55:10",
+    "message": "Database connection refused on port 5432",
+    "severity": "Critical"
+  }
+]

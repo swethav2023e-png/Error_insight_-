@@ -1,0 +1,12 @@
+2026-10-29 09:00:15 [CRITICAL] Database connection refused on port 3306 by MySQL daemon
+2026-10-29 09:01:22 [ERROR] Failed to authenticate user admin: invalid password hash
+2026-10-29 09:02:45 [WARN] HTTP request timed out after 3000ms connecting to payment microservice
+2026-10-29 09:04:10 [ERROR] File not found: /var/data/exports/monthly_report.csv
+2026-10-29 09:05:33 [CRITICAL] Out of memory: Java heap space allocation failure
+2026-10-29 09:07:01 [ERROR] [app.billing] Uncaught TypeError: Cannot read properties of undefined in invoice.py
+2026-10-29 09:08:19 [WARN] Authentication session token expired for user 4410
+2026-10-29 09:09:42 [CRITICAL] Database transaction deadlock detected on orders table
+2026-10-29 09:11:05 [INFO] Worker process restarted successfully
+2026-10-29 09:12:30 [ERROR] Socket connection reset by remote host during webhook dispatch
+Oct 29 09:14:00 webserver-01 nginx[2401]: [CRITICAL] Disk full: No space left on device (/var/log)
+2026-10-29 09:15:18 [ERROR] Database connection refused on port 3306 by MySQL daemon

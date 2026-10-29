@@ -1,58 +1,173 @@
-const $=id=>document.getElementById(id);
-const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-const C={Critical:"#ef5260",Error:"#ff9b42",Warning:"#635bff",Info:"#19b9c9"};
-function render(d){
- $("total").textContent=d.total;$("types").textContent=d.unique_types;$("critical").textContent=d.critical;$("warning").textContent=d.warning;
- const t=Object.entries(d.type_counts).sort((a,b)=>b[1]-a[1]),max=Math.max(...t.map(x=>x[1]),1);
- $("bars").innerHTML=t.map(([k,v])=>`<div class="bar"><span>${esc(k)}</span><div class="track"><div class="fill" style="width:${v/max*100}%"></div></div><b>${v}</b></div>`).join("");
- let start=0,g=[];Object.entries(d.severity_counts).forEach(([k,v])=>{let end=start+v/Math.max(d.total,1)*100;g.push(`${C[k]||"#aaa"} ${start}% ${end}%`);start=end});
- $("donut").style.background=`conic-gradient(${g.join(",")})`;$("donutTotal").textContent=d.total;
- $("legend").innerHTML=Object.entries(d.severity_counts).map(([k,v])=>`<div><span class="dot" style="background:${C[k]||"#aaa"}"></span><span>${esc(k)}</span><b>${v}</b></div>`).join("");
- $("recurringList").innerHTML=d.recurring.map(x=>`<div class="card"><div class="cardtop"><span>${esc(x.type)}</span><span class="pill ${x.severity}">${esc(x.severity)}</span></div><div class="count">${x.count}</div><small>occurrences detected</small></div>`).join("");
- $("recommendationsList").innerHTML=d.recurring.map(x=>`<div class="recommendation"><h4>✦ ${esc(x.type)}</h4><p><strong>Possible cause:</strong> ${esc(x.cause)}</p><p><strong>Recommended solution:</strong> ${esc(x.solution)}</p></div>`).join("");
- $("recentBody").innerHTML=d.recent.map(x=>`<tr><td>${esc(x.timestamp)}</td><td><b>${esc(x.type)}</b></td><td>${esc(x.message)}</td><td><span class="pill ${x.severity}">${esc(x.severity)}</span></td></tr>`).join("");
- $("health").textContent=d.critical>0?"ATTENTION":"HEALTHY";
+
+const $ = (id) => document.getElementById(id);
+
+function showMessage(message, isError = false) {
+  const el = $("msg");
+  el.textContent = message;
+  el.classList.remove("hidden");
+  el.style.color = isError ? "#dc2626" : "#15803d";
 }
-function message(t,bad=false){$("msg").textContent=t;$("msg").classList.remove("hidden");$("msg").style.color=bad?"#b42318":"#4f46c9";}
-async function demo(){try{const r=await fetch("/api/demo"),d=await r.json();render(d);message("Demo dataset loaded — dashboard updated.");}catch(e){message("Could not load demo data.",true)}}
-$("demo").onclick=demo;
 
-$("file").onchange = async (e) => {
-    const f = e.target.files[0];
-    if (!f) return;
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[char]);
+}
 
-    const form = new FormData();
-    form.append("file", f);
+async function requestJSON(url, options = {}) {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+  return response.json();
+}
 
-    try {
-        const r = await fetch("/api/analyze", {
-            method: "POST",
-            body: form
-        });
+function renderDashboard(data) {
+  // Support common response formats from the Flask API.
+  const rows = Array.isArray(data)
+    ? data
+    : (data.errors || data.records || data.recent || []);
 
-        const d = await r.json();
+  const summary = data.summary || data.stats || data;
+  const counts = {};
+  const severityCounts = {};
 
-        if (!r.ok) {
-            throw new Error(
-                d.error || `Request failed: ${r.status}`
-            );
-        }
+  rows.forEach((row) => {
+    const type = row.type || row.category || "Other";
+    const severity = String(row.severity || "Error").toLowerCase();
+    counts[type] = (counts[type] || 0) + 1;
+    severityCounts[severity] = (severityCounts[severity] || 0) + 1;
+  });
 
-        render(d);
+  const total = summary.total ?? summary.total_errors ?? rows.length;
+  const types = summary.types ?? summary.error_types ?? Object.keys(counts).length;
+  const critical = summary.critical ?? severityCounts.critical ?? 0;
+  const warning = summary.warning ?? summary.warnings ?? severityCounts.warning ?? 0;
 
-        if (d.database_warning) {
-            message(
-                `Analysis succeeded, but database saving failed: ${d.database_warning}`,
-                true
-            );
-        } else {
-            message(
-                `${f.name} analyzed successfully. ` +
-                `${d.saved_to_database ?? 0} records saved to database.`
-            );
-        }
+  $("total").textContent = total;
+  $("types").textContent = types;
+  $("critical").textContent = critical;
+  $("warning").textContent = warning;
+  $("donutTotal").textContent = total;
+  $("health").textContent = Number(critical) > 0 ? "ATTENTION" : "HEALTHY";
 
-    } catch (e) {
-        message(e.message || "Upload failed.", true);
-    }
-};
+  const maxCount = Math.max(1, ...Object.values(counts));
+  $("bars").innerHTML = Object.entries(counts).length
+    ? Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, count]) => `
+        <div class="bar-row">
+          <span>${escapeHTML(name)}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${count / maxCount * 100}%"></div></div>
+          <b>${count}</b>
+        </div>`).join("")
+    : "<p>No error categories available.</p>";
+
+  const severityColors = {
+    critical: "#ef4444",
+    error: "#f97316",
+    warning: "#f59e0b",
+    info: "#3b82f6"
+  };
+
+  const entries = Object.entries(severityCounts);
+  const sum = entries.reduce((n, [, count]) => n + count, 0);
+  let offset = 0;
+  const segments = entries.map(([severity, count]) => {
+    const start = offset;
+    offset += sum ? count / sum * 100 : 0;
+    return `${severityColors[severity] || "#8b5cf6"} ${start}% ${offset}%`;
+  });
+
+  $("donut").style.background = sum
+    ? `conic-gradient(${segments.join(",")})`
+    : "#e5e7eb";
+
+  $("legend").innerHTML = entries.map(([severity, count]) => `
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${severityColors[severity] || "#8b5cf6"}"></span>
+      ${escapeHTML(severity)} <b>${count}</b>
+    </div>`).join("");
+
+  const sortedTypes = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  $("recurringList").innerHTML = sortedTypes.length
+    ? sortedTypes.slice(0, 5).map(([type, count]) => `
+        <article class="recurring-card">
+          <b>${escapeHTML(type)}</b>
+          <p>${count} occurrence${count === 1 ? "" : "s"}</p>
+        </article>`).join("")
+    : "<p>No recurring errors found.</p>";
+
+  const recommendations = {
+    network: "Check connectivity, service availability, and timeout settings.",
+    database: "Check database connectivity, query performance, and connection pools.",
+    authentication: "Review authentication rules, credentials, and access logs.",
+    memory: "Inspect memory usage, object lifetimes, and resource limits.",
+    filesystem: "Check file paths, permissions, and available disk space."
+  };
+
+  $("recommendationsList").innerHTML = sortedTypes.length
+    ? sortedTypes.slice(0, 5).map(([type]) => {
+        const key = type.toLowerCase();
+        const advice = Object.entries(recommendations)
+          .find(([keyword]) => key.includes(keyword))?.[1]
+          || "Inspect the associated log details and trace the error to its source.";
+        return `<article class="recommendation-item">
+          <b>${escapeHTML(type)}</b><p>${escapeHTML(advice)}</p>
+        </article>`;
+      }).join("")
+    : "<p>Load or upload logs to receive recommendations.</p>";
+
+  $("recentBody").innerHTML = rows.length
+    ? rows.slice().reverse().slice(0, 20).map((row) => `
+        <tr>
+          <td>${escapeHTML(row.timestamp || row.time || "—")}</td>
+          <td>${escapeHTML(row.type || row.category || "Other")}</td>
+          <td>${escapeHTML(row.message || row.error || "—")}</td>
+          <td>${escapeHTML(row.severity || "Error")}</td>
+        </tr>`).join("")
+    : "<tr><td colspan='4'>No error records available.</td></tr>";
+}
+
+async function loadDemo() {
+  try {
+    $("demo").disabled = true;
+    $("demo").textContent = "Loading...";
+    const data = await requestJSON("/api/demo");
+    renderDashboard(data);
+    showMessage("Demo data loaded.");
+  } catch (error) {
+    showMessage(`Could not load demo data: ${error.message}`, true);
+  } finally {
+    $("demo").disabled = false;
+    $("demo").textContent = "Load Demo";
+  }
+}
+
+async function uploadErrors(file) {
+  try {
+    const parsed = JSON.parse(await file.text());
+
+    const data = await requestJSON("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(parsed)
+    });
+
+    renderDashboard(data);
+    showMessage("File analyzed successfully.");
+  } catch (error) {
+    showMessage(`Could not analyze file: ${error.message}`, true);
+  }
+}
+
+$("demo").addEventListener("click", loadDemo);
+$("file").addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (file) uploadErrors(file);
+});
+
+// Load sample data automatically when the dashboard opens.
+loadDemo();

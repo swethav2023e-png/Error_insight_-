@@ -1,0 +1,88 @@
+{
+  "errors": [
+    {
+      "id": "ERR-1001",
+      "timestamp": "2026-10-29 08:05:12",
+      "type": "Database",
+      "message": "Database connection refused on port 5432",
+      "severity": "Critical"
+    },
+    {
+      "id": "ERR-1002",
+      "timestamp": "2026-10-29 08:07:33",
+      "type": "Authentication",
+      "message": "JWT token expired for user session admin_99",
+      "severity": "Warning"
+    },
+    {
+      "id": "ERR-1003",
+      "timestamp": "2026-10-29 08:10:04",
+      "type": "Network",
+      "message": "Socket timeout while connecting to payment gateway api.stripe.com:443",
+      "severity": "Error"
+    },
+    {
+      "id": "ERR-1004",
+      "timestamp": "2026-10-29 08:12:49",
+      "type": "File System",
+      "message": "File not found: /var/log/application/audit_20261029.log",
+      "severity": "Error"
+    },
+    {
+      "id": "ERR-1005",
+      "timestamp": "2026-10-29 08:15:20",
+      "type": "Memory",
+      "message": "Out of memory: Heap memory limit exceeded during large batch report generation",
+      "severity": "Critical"
+    },
+    {
+      "id": "ERR-1006",
+      "timestamp": "2026-10-29 08:18:01",
+      "type": "Application",
+      "message": "NullPointerException in OrderCheckoutService line 142",
+      "severity": "Error"
+    },
+    {
+      "id": "ERR-1007",
+      "timestamp": "2026-10-29 08:21:15",
+      "type": "Database",
+      "message": "Database query deadlock detected on table 'account_transactions'",
+      "severity": "Critical"
+    },
+    {
+      "id": "ERR-1008",
+      "timestamp": "2026-10-29 08:24:40",
+      "type": "Authentication",
+      "message": "Unauthorized access attempt: invalid API key header",
+      "severity": "Error"
+    },
+    {
+      "id": "ERR-1009",
+      "timestamp": "2026-10-29 08:27:05",
+      "type": "Network",
+      "message": "DNS resolution failure for host redis-primary.internal",
+      "severity": "Warning"
+    },
+    {
+      "id": "ERR-1010",
+      "timestamp": "2026-10-29 08:30:19",
+      "type": "Database",
+      "message": "Database connection pool exhausted: 100/100 connections active",
+      "severity": "Critical"
+    },
+    {
+      "id": "ERR-1011",
+      "timestamp": "2026-10-29 08:32:50",
+      "type": "File System",
+      "message": "Disk full error: No space left on device (/data/uploads)",
+      "severity": "Critical"
+    },
+    {
+      "id": "ERR-1012",
+      "timestamp": "2026-10-29 08:35:10",
+      "type": "Application",
+      "message": "Configuration parameter 'MAX_WORKERS' missing from environment",
+      "severity": "Info"
+    }
+  ]
+}

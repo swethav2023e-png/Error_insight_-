@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogHealth – Log Analytics and System Health Intelligence</title>
+    <meta name="description" content="LogHealth is a log analytics and system health intelligence platform that transforms application logs into actionable insights about reliability, operational health, anomalies, and system behavior.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body class="cyber-theme">
+    <!-- Ambient glowing backdrop orbs -->
+    <div class="glow-orb orb-violet"></div>
+    <div class="glow-orb orb-cyan"></div>
+    <div class="glow-orb orb-crimson"></div>
+
+    <div class="dashboard-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="cyber-sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">LogHealth</span>
+                    <span class="brand-subtitle">HEALTH INTELLIGENCE</span>
+                </div>
+            </div>
+
+            <div class="nav-section-label">OBSERVABILITY CONSOLE</div>
+            <nav class="sidebar-nav">
+                <a href="#overview" class="nav-link active" data-tab="overview" id="nav-overview">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                    <span>Overview</span>
+                </a>
+                <a href="#analytics" class="nav-link" data-tab="analytics" id="nav-analytics">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    <span>Analytics &amp; Trends</span>
+                </a>
+                <a href="#components" class="nav-link" data-tab="components" id="nav-components">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <span>Component Health</span>
+                </a>
+                <a href="#anomalies" class="nav-link" data-tab="anomalies" id="nav-anomalies">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <span>Anomalies</span>
+                </a>
+                <a href="#risks" class="nav-link" data-tab="risks" id="nav-risks">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span>Risk Assessment</span>
+                </a>
+                <a href="#history" class="nav-link" data-tab="history" id="nav-history">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <span>Log History</span>
+                </a>
+                <a href="#reports" class="nav-link" data-tab="reports" id="nav-reports">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <span>Health Reports</span>
+                </a>
+                <a href="#upload" class="nav-link" data-tab="upload" id="nav-upload">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span>Log Ingestion</span>
+                </a>
+                <a href="#docs" class="nav-link" data-tab="docs" id="nav-docs">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    <span>API Integration</span>
+                </a>
+                <a href="#settings" class="nav-link" data-tab="settings" id="nav-settings">
+                    <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>Settings &amp; DB</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status-pill">
+                    <span class="status-dot pulsing" id="sidebar-status-dot"></span>
+                    <div class="status-details">
+                        <span class="status-label">LOGHEALTH CORE</span>
+                        <span class="status-sub" id="sidebar-db-summary">Connecting...</span>
+                    </div>
+                </div>
+                <div class="tech-stack-badges">
+                    <span class="tech-badge">FLASK 3</span>
+                    <span class="tech-badge">SQLITE</span>
+                    <span class="tech-badge">CHART.JS</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="cyber-main">
+            <!-- Top Navigation Bar -->
+            <header class="cyber-topbar">
+                <div class="topbar-left">
+                    <div class="view-breadcrumb">
+                        <span class="breadcrumb-root">SYSTEM HEALTH INTELLIGENCE</span>
+                        <span class="breadcrumb-separator">/</span>
+                        <span class="breadcrumb-current" id="current-view-title">Overview</span>
+                    </div>
+                    <h1 class="topbar-heading">Log<span class="heading-accent">Health</span></h1>
+                </div>
+
+                <div class="topbar-right">
+                    <!-- Real Database Status Pill -->
+                    <div class="db-status-badge" id="top-db-status">
+                        <span class="db-indicator-dot" id="db-indicator-dot"></span>
+                        <span id="db-status-text">SQLite: Checking...</span>
+                    </div>
+
+                    <!-- Global Refresh Button -->
+                    <button class="btn btn-secondary btn-icon" id="btn-refresh" title="Refresh Dashboard Telemetry">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        <span>Refresh</span>
+                    </button>
+
+                    <!-- Quick Ingestion Action -->
+                    <button class="btn btn-primary" id="btn-quick-upload">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        <span>Ingest Logs</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Toast / Notification Container -->
+            <div id="toast-container" class="toast-container"></div>
+
+            <!-- VIEW 1: OVERVIEW (DASHBOARD) -->
+            <section id="view-overview" class="content-view active">
+                <!-- System Health Hero Banner with Explainable Health Score -->
+                <div class="health-hero-card">
+                    <div class="hero-content">
+                        <div class="hero-kicker">SYSTEM HEALTH &amp; RELIABILITY INTELLIGENCE</div>
+                        <h2 class="hero-title" id="hero-title">Operational Health &amp; Anomaly Analysis</h2>
+                        <p class="hero-desc" id="hero-summary-text">
+                            LogHealth transforms raw application and server logs into actionable operational intelligence. Ingest your logs to calculate health score, component-level failure distribution, statistical anomalies, and risk priorities.
+                        </p>
+                        <div class="hero-actions">
+                            <button class="btn btn-secondary btn-sm" id="btn-explain-formula">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                <span>Explain Scoring Formula</span>
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="btn-hero-view-report">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                <span>Generate Health Report</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="hero-stat-badge">
+                        <span class="badge-label">SYSTEM HEALTH SCORE</span>
+                        <div class="score-display-wrap">
+                            <span class="score-number" id="health-score-val">—</span>
+                            <span class="score-scale">/100</span>
+                        </div>
+                        <span class="badge-value" id="system-health-badge">ANALYZING...</span>
+                        <span class="badge-meta" id="system-health-meta">Live Log Telemetry</span>
+                    </div>
+                </div>
+
+                <!-- 5 Metric Summary Cards -->
+                <div class="metric-grid">
+                    <div class="metric-card card-total">
+                        <div class="metric-header">
+                            <span class="metric-title">TOTAL EVENTS</span>
+                            <div class="metric-icon total-icon">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            </div>
+                        </div>
+                        <div class="metric-value" id="stat-total">0</div>
+                        <div class="metric-footer" id="stat-total-footer">Processed in telemetry stream</div>
+                    </div>
+
+                    <div class="metric-card card-critical">
+                        <div class="metric-header">
+                            <span class="metric-title">CRITICAL EVENTS</span>
+                            <div class="metric-icon critical-icon">
+                                <svg viewBox="0 0 24 24"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            </div>
+                        </div>
+                        <div class="metric-value text-critical" id="stat-critical">0</div>
+                        <div class="metric-footer">Urgent operational failures</div>
+                    </div>
+
+                    <div class="metric-card card-errors">
+                        <div class="metric-header">
+                            <span class="metric-title">APPLICATION ERRORS</span>
+                            <div class="metric-icon error-icon">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                            </div>
+                        </div>
+                        <div class="metric-value text-orange" id="stat-errors">0</div>
+                        <div class="metric-footer">Uncaught runtime exceptions</div>
+                    </div>
+
+                    <div class="metric-card card-warning">
+                        <div class="metric-header">
+                            <span class="metric-title">SYSTEM WARNINGS</span>
+                            <div class="metric-icon warning-icon">
+                                <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            </div>
+                        </div>
+                        <div class="metric-value text-warning" id="stat-warning">0</div>
+                        <div class="metric-footer">Latent risks &amp; degraded states</div>
+                    </div>
+
+                    <div class="metric-card card-info">
+                        <div class="metric-header">
+                            <span class="metric-title">INFORMATIONAL</span>
+                            <div class="metric-icon info-icon">
+                                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            </div>
+                        </div>
+                        <div class="metric-value text-info" id="stat-info">0</div>
+                        <div class="metric-footer">Normal operational events</div>
+                    </div>
+                </div>
+
+                <!-- Active Anomaly Alert Banner (Conditional) -->
+                <div id="overview-anomaly-banner" class="anomaly-banner hidden">
+                    <div class="anomaly-banner-icon">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    </div>
+                    <div class="anomaly-banner-content">
+                        <strong id="anomaly-banner-title">Statistical Anomalies Detected</strong>
+                        <span id="anomaly-banner-text">Elevated event volumes observed in recent time buckets.</span>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" id="btn-banner-view-anomalies">Inspect Anomalies →</button>
+                </div>
+
+                <!-- Interactive Charts Row -->
+                <div class="chart-row">
+                    <!-- Category Frequency Bar Chart -->
+                    <div class="cyber-panel panel-bar">
+                        <div class="panel-header">
+                            <div>
+                                <h3 class="panel-title">Component Event Distribution</h3>
+                                <p class="panel-subtitle">Calculated occurrence volume per subsystem component</p>
+                            </div>
+                            <span class="panel-tag tag-violet">COMPONENTS</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Severity Doughnut Chart -->
+                    <div class="cyber-panel panel-donut">
+                        <div class="panel-header">
+                            <div>
+                                <h3 class="panel-title">Severity Impact Ratio</h3>
+                                <p class="panel-subtitle">Critical vs Error vs Warning vs Informational breakdown</p>
+                            </div>
+                            <span class="panel-tag tag-cyan">SEVERITY</span>
+                        </div>
+                        <div class="chart-container donut-wrap">
+                            <canvas id="severityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Component Health & Risk Quick Matrix -->
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title">Subsystem Health &amp; Risk Ranking</h3>
+                            <p class="panel-subtitle">Evidence-based assessment of application components derived from real log metrics</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="btn-view-all-components">Component Deep Dive →</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="cyber-table" id="overview-component-table">
+                            <thead>
+                                <tr>
+                                    <th>COMPONENT</th>
+                                    <th>TOTAL EVENTS</th>
+                                    <th>CRITICAL</th>
+                                    <th>ERRORS</th>
+                                    <th>FAILURE RATE</th>
+                                    <th>RISK LEVEL</th>
+                                    <th>EVIDENCE &amp; OBSERVATION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="overview-component-body">
+                                <tr><td colspan="7" class="text-center py-4">Ingest logs to evaluate component health...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Recurring Errors & Actionable Recommendations -->
+                <div class="two-column-grid">
+                    <!-- Recurring Errors Section -->
+                    <div class="cyber-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3 class="panel-title">Top Recurring Signatures</h3>
+                                <p class="panel-subtitle">Repeated failure patterns ranked by frequency and impact</p>
+                            </div>
+                            <span class="panel-tag tag-crimson">RECURRING</span>
+                        </div>
+                        <div id="recurring-errors-list" class="recurring-list">
+                            <div class="loading-state">Loading recurring failure patterns...</div>
+                        </div>
+                    </div>
+
+                    <!-- Operational Diagnostic Recommendations -->
+                    <div class="cyber-panel">
+                        <div class="panel-header">
+                            <div>
+                                <h3 class="panel-title">Operational Health Recommendations</h3>
+                                <p class="panel-subtitle">Rule-based preliminary investigation actions and possible causes</p>
+                            </div>
+                            <span class="panel-tag tag-violet">INVESTIGATION</span>
+                        </div>
+                        <div id="recommendations-list" class="recommendations-container">
+                            <div class="loading-state">Generating recommendations from telemetry...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Events Table Preview -->
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h3 class="panel-title">Latest Ingested Log Records</h3>
+                            <p class="panel-subtitle">Recent telemetry entries persisted in the local database</p>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="btn-view-all-history">View All in History →</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="cyber-table" id="recent-errors-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>TIMESTAMP</th>
+                                    <th>SOURCE</th>
+                                    <th>COMPONENT</th>
+                                    <th>LOG / ERROR MESSAGE</th>
+                                    <th>SEVERITY</th>
+                                    <th>ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recent-table-body">
+                                <tr><td colspan="7" class="text-center py-4">Loading stored error history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 2: LOG ANALYTICS & TRENDS -->
+            <section id="view-analytics" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">Log Analytics &amp; Temporal Trends</h2>
+                            <p class="panel-subtitle">Time-series error velocity, peak periods, and frequency distributions</p>
+                        </div>
+                        <div class="history-actions">
+                            <span class="record-counter" id="analytics-total-count">0 Events Analyzed</span>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Line Chart -->
+                    <div class="chart-container-large">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+
+                    <!-- Historical Comparison Delta Banner -->
+                    <div class="comparison-card" id="history-comparison-card">
+                        <div class="comparison-icon">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                        </div>
+                        <div class="comparison-content">
+                            <strong id="comparison-title">Historical Baseline Comparison</strong>
+                            <p id="comparison-description">Loading baseline comparison...</p>
+                            <div class="comparison-tags" id="comparison-tags"></div>
+                        </div>
+                    </div>
+
+                    <!-- Category Cards Matrix -->
+                    <div class="panel-section-title">Component Activity Matrix</div>
+                    <div class="analytics-category-grid" id="analytics-category-grid">
+                        <div class="loading-state">Loading subsystem analysis...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 3: COMPONENT HEALTH -->
+            <section id="view-components" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">Component &amp; Service Health Matrix</h2>
+                            <p class="panel-subtitle">Subsystem breakdown with failure rates, risk scores, and concrete evidence</p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="cyber-table">
+                            <thead>
+                                <tr>
+                                    <th>COMPONENT</th>
+                                    <th>TOTAL EVENTS</th>
+                                    <th>CRITICAL</th>
+                                    <th>ERRORS</th>
+                                    <th>WARNINGS</th>
+                                    <th>FAILURE RATE</th>
+                                    <th>RISK SCORE</th>
+                                    <th>RISK LEVEL</th>
+                                    <th>PRIMARY EVIDENCE</th>
+                                    <th>RECOMMENDED ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="full-component-body">
+                                <tr><td colspan="10" class="text-center py-4">Ingest logs to populate component matrix...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 4: ANOMALIES -->
+            <section id="view-anomalies" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">Statistical Anomaly &amp; Pattern Detection</h2>
+                            <p class="panel-subtitle">Volume spikes, critical error bursts, and component failure concentrations</p>
+                        </div>
+                    </div>
+
+                    <div id="anomalies-list" class="anomalies-container">
+                        <div class="loading-state">Evaluating telemetry for anomalies...</div>
+                    </div>
+
+                    <div class="panel-section-title">Recurring Error Signatures (Pattern Clustering)</div>
+                    <div class="table-responsive">
+                        <table class="cyber-table">
+                            <thead>
+                                <tr>
+                                    <th>OCCURRENCES</th>
+                                    <th>COMPONENT</th>
+                                    <th>SEVERITY</th>
+                                    <th>NORMALIZED ERROR SIGNATURE</th>
+                                    <th>LAST OBSERVED</th>
+                                </tr>
+                            </thead>
+                            <tbody id="analytics-recurring-body">
+                                <tr><td colspan="5" class="text-center py-4">No recurring patterns detected.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 5: RISK ASSESSMENT -->
+            <section id="view-risks" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">Evidence-Based Risk Prioritization</h2>
+                            <p class="panel-subtitle">Transparent risk prioritization ranked by severity, recurrence, and impact</p>
+                        </div>
+                    </div>
+
+                    <div id="risks-list" class="risks-container">
+                        <div class="loading-state">Evaluating risk profile...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 6: LOG HISTORY -->
+            <section id="view-history" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">Persistent Log History</h2>
+                            <p class="panel-subtitle">Search, filter, and inspect every record stored in SQLite</p>
+                        </div>
+                        <div class="history-actions">
+                            <span class="record-counter" id="history-total-count">0 Records Stored</span>
+                        </div>
+                    </div>
+
+                    <!-- Filtering & Search Toolbar -->
+                    <div class="filter-toolbar">
+                        <div class="search-input-wrap">
+                            <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="text" id="history-search" class="cyber-input" placeholder="Search log messages, components, or source ID...">
+                        </div>
+
+                        <div class="filter-controls">
+                            <!-- Severity Filter -->
+                            <div class="filter-group">
+                                <label for="filter-severity">Severity:</label>
+                                <select id="filter-severity" class="cyber-select">
+                                    <option value="">All Severities</option>
+                                    <option value="Critical">Critical</option>
+                                    <option value="Error">Error</option>
+                                    <option value="Warning">Warning</option>
+                                    <option value="Info">Info</option>
+                                </select>
+                            </div>
+
+                            <!-- Category Filter -->
+                            <div class="filter-group">
+                                <label for="filter-category">Component:</label>
+                                <select id="filter-category" class="cyber-select">
+                                    <option value="">All Components</option>
+                                    <option value="Database">Database</option>
+                                    <option value="Authentication">Authentication</option>
+                                    <option value="Network">Network</option>
+                                    <option value="File System">File System</option>
+                                    <option value="Memory">Memory</option>
+                                    <option value="API & Backend">API &amp; Backend</option>
+                                    <option value="Background Jobs">Background Jobs</option>
+                                    <option value="Infrastructure">Infrastructure</option>
+                                    <option value="Application">Application</option>
+                                </select>
+                            </div>
+
+                            <!-- Sorting Dropdown -->
+                            <div class="filter-group">
+                                <label for="filter-sort">Sort:</label>
+                                <select id="filter-sort" class="cyber-select">
+                                    <option value="timestamp_desc">Newest First</option>
+                                    <option value="timestamp_asc">Oldest First</option>
+                                    <option value="severity_desc">Severity (High to Low)</option>
+                                    <option value="category_asc">Component (A-Z)</option>
+                                </select>
+                            </div>
+
+                            <!-- Reset Filters -->
+                            <button class="btn btn-secondary btn-sm" id="btn-reset-filters">Reset</button>
+                        </div>
+                    </div>
+
+                    <!-- History Records Table -->
+                    <div class="table-responsive">
+                        <table class="cyber-table" id="history-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>TIMESTAMP</th>
+                                    <th>SOURCE</th>
+                                    <th>COMPONENT</th>
+                                    <th>LOG MESSAGE</th>
+                                    <th>SEVERITY</th>
+                                    <th>ACTION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <tr><td colspan="7" class="text-center py-4">Loading stored history...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Controls -->
+                    <div class="pagination-bar">
+                        <div class="pagination-info" id="pagination-info">Showing 0-0 of 0 records</div>
+                        <div class="pagination-actions">
+                            <button class="btn btn-secondary btn-sm" id="btn-prev-page" disabled>Previous</button>
+                            <span class="pagination-current" id="pagination-current-page">Page 1 of 1</span>
+                            <button class="btn btn-secondary btn-sm" id="btn-next-page" disabled>Next</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 7: HEALTH REPORTS -->
+            <section id="view-reports" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">System Health &amp; Reliability Report</h2>
+                            <p class="panel-subtitle">Comprehensive executive intelligence report compiled from real log data</p>
+                        </div>
+                        <div class="report-actions">
+                            <button class="btn btn-primary btn-sm" id="btn-download-report-md">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                <span>Download Markdown (.md)</span>
+                            </button>
+                            <button class="btn btn-secondary btn-sm" id="btn-copy-report-md">Copy Text</button>
+                        </div>
+                    </div>
+
+                    <div class="report-viewer-card">
+                        <div class="report-viewer-header">
+                            <span class="report-status-badge" id="report-status-badge">REPORT GENERATED</span>
+                            <span class="report-timestamp" id="report-timestamp">—</span>
+                        </div>
+                        <div class="report-content-body" id="report-content-body">
+                            <div class="loading-state">Compiling system health report from active database telemetry...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 8: LOG INGESTION (UPLOAD) -->
+            <section id="view-upload" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">Ingest &amp; Analyze Logs</h2>
+                            <p class="panel-subtitle">Accepts JSON (Format A &amp; Format B) and plain-text log files with automated pattern extraction</p>
+                        </div>
+                        <div class="sample-actions">
+                            <button class="btn btn-secondary btn-sm" id="btn-load-demo-dataset">Load Demo Dataset</button>
+                        </div>
+                    </div>
+
+                    <!-- Dropzone -->
+                    <div class="upload-dropzone" id="upload-dropzone">
+                        <input type="file" id="file-input" class="file-input" accept=".json,.log,.txt">
+                        <div class="dropzone-content">
+                            <div class="dropzone-icon">
+                                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <h3 class="dropzone-title">Drag &amp; Drop your Log File here</h3>
+                            <p class="dropzone-subtitle">or <span class="dropzone-browse">browse from computer</span></p>
+                            <div class="dropzone-formats">
+                                <span class="fmt-pill">JSON Format A</span>
+                                <span class="fmt-pill">JSON Format B</span>
+                                <span class="fmt-pill">Plain Text .log</span>
+                                <span class="fmt-pill">Standard .txt</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Feedback Box -->
+                    <div id="upload-feedback" class="upload-feedback-box hidden"></div>
+
+                    <!-- Direct Text / JSON Paste Tab -->
+                    <div class="paste-section">
+                        <div class="paste-header">
+                            <h4 class="paste-title">Or Paste Raw Log / JSON Content</h4>
+                            <span class="paste-hint">Supports direct JSON arrays or multi-line syslog text</span>
+                        </div>
+                        <textarea id="raw-log-input" class="cyber-textarea" placeholder="Paste your errors.json content or raw log lines here...&#10;Example:&#10;2026-10-29 08:30:00 [CRITICAL] Database connection refused on port 5432"></textarea>
+                        <div class="paste-actions">
+                            <button class="btn btn-primary" id="btn-analyze-raw">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3"/>
+                                </svg>
+                                <span>Analyze &amp; Persist to Database</span>
+                            </button>
+                            <button class="btn btn-secondary" id="btn-clear-raw">Clear</button>
+                        </div>
+                    </div>
+
+                    <!-- Format Guidelines & Sample Previews -->
+                    <div class="format-showcase">
+                        <h4 class="showcase-title">Supported Data Schemas</h4>
+                        <div class="showcase-grid">
+                            <div class="format-card">
+                                <div class="format-card-header">
+                                    <span class="format-name">Format A (Structured Object)</span>
+                                    <button class="btn-copy-format" data-format="a">Copy Sample</button>
+                                </div>
+                                <pre><code>{
+  "errors": [
+    {
+      "id": 1,
+      "timestamp": "2026-10-29 08:00:00",
+      "type": "Database",
+      "message": "Database connection failed",
+      "severity": "Critical"
+    }
+  ]
+}</code></pre>
+                            </div>
+
+                            <div class="format-card">
+                                <div class="format-card-header">
+                                    <span class="format-name">Format B (Error Array)</span>
+                                    <button class="btn-copy-format" data-format="b">Copy Sample</button>
+                                </div>
+                                <pre><code>[
+  {
+    "timestamp": "2026-10-29 08:00:00",
+    "message": "Connection timeout",
+    "severity": "Warning"
+  }
+]</code></pre>
+                            </div>
+
+                            <div class="format-card">
+                                <div class="format-card-header">
+                                    <span class="format-name">Plain-Text Log Format</span>
+                                    <button class="btn-copy-format" data-format="text">Copy Sample</button>
+                                </div>
+                                <pre><code>2026-10-29 08:00:00 [CRITICAL] Database connection failed
+2026-10-29 08:02:15 [ERROR] JWT authentication token expired
+2026-10-29 08:05:30 [WARN] Network timeout connecting to redis</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 9: API INTEGRATION -->
+            <section id="view-docs" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">REST API &amp; Integration Guide</h2>
+                            <p class="panel-subtitle">Documented integration contract for external Log Parsers and telemetry agents</p>
+                        </div>
+                        <a href="/api/docs" target="_blank" class="btn btn-secondary btn-sm">Raw JSON Spec ↗</a>
+                    </div>
+
+                    <!-- Base URL Card -->
+                    <div class="api-contract-card">
+                        <div class="contract-header">
+                            <span class="contract-badge">SHARED BASE URL</span>
+                            <span class="contract-auth">AUTHENTICATION: X-API-Key</span>
+                        </div>
+                        <div class="endpoint-url-box">
+                            <code id="api-base-url-display">http://127.0.0.1:5000</code>
+                            <button class="btn-copy" id="btn-copy-base-url">Copy</button>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Endpoints Explorer -->
+                    <div class="endpoints-list">
+                        <!-- Endpoint 1: Health -->
+                        <div class="endpoint-card">
+                            <div class="endpoint-header">
+                                <span class="http-badge get">GET</span>
+                                <span class="endpoint-path">/api/health</span>
+                                <span class="endpoint-desc">Application health and database connectivity</span>
+                                <button class="btn btn-secondary btn-sm test-api-btn" data-method="GET" data-path="/api/health">Test Endpoint</button>
+                            </div>
+                        </div>
+
+                        <!-- Endpoint 2: Logs (Log Parser integration) -->
+                        <div class="endpoint-card">
+                            <div class="endpoint-header">
+                                <span class="http-badge post">POST</span>
+                                <span class="endpoint-path">/api/logs</span>
+                                <span class="endpoint-desc">Primary ingestion endpoint (Accepts Format A &amp; B JSON, requires API Key)</span>
+                                <button class="btn btn-secondary btn-sm test-api-btn" data-method="POST" data-path="/api/logs" data-sample="logs">Test Endpoint</button>
+                            </div>
+                        </div>
+
+                        <!-- Endpoint 3: Analyze -->
+                        <div class="endpoint-card">
+                            <div class="endpoint-header">
+                                <span class="http-badge post">POST</span>
+                                <span class="endpoint-path">/api/analyze</span>
+                                <span class="endpoint-desc">Upload a JSON or plain-text log file for immediate health analysis &amp; saving</span>
+                            </div>
+                        </div>
+
+                        <!-- Endpoint 4: History -->
+                        <div class="endpoint-card">
+                            <div class="endpoint-header">
+                                <span class="http-badge get">GET</span>
+                                <span class="endpoint-path">/api/history</span>
+                                <span class="endpoint-desc">Retrieve stored records with pagination and filtering</span>
+                                <button class="btn btn-secondary btn-sm test-api-btn" data-method="GET" data-path="/api/history?limit=5">Test Endpoint</button>
+                            </div>
+                        </div>
+
+                        <!-- Endpoint 5: Analytics -->
+                        <div class="endpoint-card">
+                            <div class="endpoint-header">
+                                <span class="http-badge get">GET</span>
+                                <span class="endpoint-path">/api/analytics</span>
+                                <span class="endpoint-desc">Calculated health score, component health, anomalies, and chart datasets</span>
+                                <button class="btn btn-secondary btn-sm test-api-btn" data-method="GET" data-path="/api/analytics">Test Endpoint</button>
+                            </div>
+                        </div>
+
+                        <!-- Endpoint 6: Report -->
+                        <div class="endpoint-card">
+                            <div class="endpoint-header">
+                                <span class="http-badge get">GET</span>
+                                <span class="endpoint-path">/api/report</span>
+                                <span class="endpoint-desc">Generate executive System Health &amp; Reliability Report (JSON or Markdown)</span>
+                                <button class="btn btn-secondary btn-sm test-api-btn" data-method="GET" data-path="/api/report">Test Endpoint</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Built-in API Response Console -->
+                    <div class="api-console-panel">
+                        <div class="console-header">
+                            <span class="console-title">Live API Request Console</span>
+                            <span class="console-status" id="api-console-status">Ready</span>
+                        </div>
+                        <pre class="console-output" id="api-console-output">// Click "Test Endpoint" above to send a real HTTP request to the running Flask server.</pre>
+                    </div>
+
+                    <!-- Python Integration Client Code Snippet -->
+                    <div class="integration-code-block">
+                        <div class="code-header">
+                            <span>Python Log Parser Client Integration (requests library)</span>
+                            <button class="btn-copy" id="btn-copy-python-code">Copy Client Code</button>
+                        </div>
+                        <pre><code id="python-snippet-content">import requests
+
+BASE_URL = "http://127.0.0.1:5000"
+API_KEY = "dev-secret-key-12345"
+
+records = [
+    {
+        "id": "EVT-001",
+        "timestamp": "2026-10-29 08:30:00",
+        "type": "Database",
+        "message": "Database connection refused on port 5432",
+        "severity": "Critical"
+    }
+]
+
+response = requests.post(
+    f"{BASE_URL}/api/logs",
+    json={"errors": records},
+    headers={"X-API-Key": API_KEY, "Content-Type": "application/json"}
+)
+
+print(response.status_code, response.json())</code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 10: SETTINGS & DATABASE -->
+            <section id="view-settings" class="content-view">
+                <div class="cyber-panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2 class="panel-title">System &amp; Database Settings</h2>
+                            <p class="panel-subtitle">Manage persistence, database connectivity, credentials, and demonstration data</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-grid">
+                        <!-- Database Information Card -->
+                        <div class="settings-card">
+                            <h3 class="card-title">Database Storage Engine</h3>
+                            <div class="setting-item">
+                                <span class="setting-name">Engine:</span>
+                                <span class="setting-val" id="settings-db-engine">SQLite (Local)</span>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-name">Database File:</span>
+                                <span class="setting-val" id="settings-db-file">error_insight.db</span>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-name">Current Records:</span>
+                                <span class="setting-val" id="settings-db-count">0 records</span>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-name">Architecture:</span>
+                                <span class="setting-val">DatabaseManager Abstraction Layer (PostgreSQL Compatible)</span>
+                            </div>
+                        </div>
+
+                        <!-- API Key Configuration Card -->
+                        <div class="settings-card">
+                            <h3 class="card-title">API Authentication Key</h3>
+                            <p class="setting-desc">The key used by external Log Parsers in the <code>X-API-Key</code> request header.</p>
+                            <div class="key-input-wrap">
+                                <input type="text" id="settings-api-key" class="cyber-input" value="dev-secret-key-12345">
+                                <button class="btn btn-secondary btn-sm" id="btn-save-client-key">Save Key</button>
+                            </div>
+                            <span class="setting-hint">Stored in browser local session for API Explorer &amp; Client testing.</span>
+                        </div>
+
+                        <!-- Data Management Actions -->
+                        <div class="settings-card col-span-2">
+                            <h3 class="card-title">Database Maintenance &amp; Demonstration</h3>
+                            <div class="maintenance-actions">
+                                <button class="btn btn-primary" id="btn-seed-data">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                                    </svg>
+                                    <span>Seed Realistic Demo Data (12 Records)</span>
+                                </button>
+
+                                <button class="btn btn-secondary" id="btn-export-json">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                                    </svg>
+                                    <span>Export Records as JSON</span>
+                                </button>
+
+                                <button class="btn btn-danger" id="btn-clear-database">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    <span>Clear Database</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="cyber-footer">
+                <div class="footer-left">
+                    <span>LogHealth – Log Analytics and System Health Intelligence</span>
+                    <span class="footer-dot">•</span>
+                    <span>Production Telemetry &amp; Anomaly Detection</span>
+                </div>
+                <div class="footer-right">
+                    <span>Flask 3.1 • SQLite Persistence • Reusable REST API</span>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- Error / Log Detail Modal -->
+    <div id="error-detail-modal" class="cyber-modal hidden">
+        <div class="modal-backdrop" id="modal-backdrop"></div>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge" id="modal-category">DATABASE</span>
+                    <h3 class="modal-title" id="modal-title">Log Event Details</h3>
+                </div>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-meta-grid">
+                    <div class="meta-item">
+                        <span class="meta-label">RECORD ID</span>
+                        <span class="meta-value" id="modal-id">—</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">SOURCE ID</span>
+                        <span class="meta-value" id="modal-source-id">—</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">TIMESTAMP</span>
+                        <span class="meta-value" id="modal-timestamp">—</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">SEVERITY</span>
+                        <span class="meta-value" id="modal-severity">—</span>
+                    </div>
+                </div>
+
+                <div class="modal-message-box">
+                    <span class="meta-label">LOG MESSAGE / EXCEPTION PAYLOAD</span>
+                    <pre class="error-msg-code" id="modal-message">—</pre>
+                </div>
+
+                <!-- Recommendations Section inside Modal -->
+                <div class="modal-rec-box">
+                    <div class="rec-header">
+                        <span class="rec-title">Operational Troubleshooting Guidance</span>
+                        <span class="rec-disclaimer-pill">Preliminary Suggestions</span>
+                    </div>
+                    <div class="rec-causes">
+                        <strong>Possible Root Causes:</strong>
+                        <ul id="modal-causes-list"></ul>
+                    </div>
+                    <div class="rec-solutions">
+                        <strong>Recommended Actions:</strong>
+                        <ul id="modal-solutions-list"></ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-btn-dismiss">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explain Formula Modal -->
+    <div id="formula-modal" class="cyber-modal hidden">
+        <div class="modal-backdrop" id="formula-backdrop"></div>
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge">TRANSPARENCY</span>
+                    <h3 class="modal-title">System Health Scoring Formula</h3>
+                </div>
+                <button class="modal-close" id="formula-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="formula-intro">
+                    LogHealth uses an explainable, evidence-based mathematical formula calculated strictly from real log telemetry. No numbers are fabricated or estimated.
+                </p>
+                <div class="formula-box">
+                    <code>Score = max(0, min(100, 100 - (Critical×12 + Error×4 + Warning×1.5) × DensityFactor - AnomalyPenalty - ConcentrationPenalty))</code>
+                </div>
+
+                <div class="panel-section-title">Active Scoring Breakdown</div>
+                <div class="formula-breakdown-grid" id="formula-breakdown-details">
+                    <div class="breakdown-row">
+                        <span>Base Points:</span>
+                        <strong>100.0</strong>
+                    </div>
+                    <div class="breakdown-row text-critical">
+                        <span>Critical Deductions (-12 × events × density):</span>
+                        <strong id="fb-critical-deduction">0.0</strong>
+                    </div>
+                    <div class="breakdown-row text-orange">
+                        <span>Error Deductions (-4 × events × density):</span>
+                        <strong id="fb-error-deduction">0.0</strong>
+                    </div>
+                    <div class="breakdown-row text-warning">
+                        <span>Warning Deductions (-1.5 × events × density):</span>
+                        <strong id="fb-warning-deduction">0.0</strong>
+                    </div>
+                    <div class="breakdown-row">
+                        <span>Anomaly Spike Deductions:</span>
+                        <strong id="fb-anomaly-deduction">0.0</strong>
+                    </div>
+                    <div class="breakdown-row">
+                        <span>Component Failure Concentration:</span>
+                        <strong id="fb-concentration-deduction">0.0</strong>
+                    </div>
+                    <div class="breakdown-row total-row">
+                        <span>Calculated System Health Score:</span>
+                        <strong id="fb-final-score">100 / 100</strong>
+                    </div>
+                </div>
+
+                <div class="panel-section-title">Status Rating Bands</div>
+                <div class="bands-list">
+                    <div class="band-item band-healthy">
+                        <strong>90 – 100: Healthy</strong>
+                        <span>Optimal operational condition with minimal non-critical events.</span>
+                    </div>
+                    <div class="band-item band-degraded">
+                        <strong>75 – 89: Degraded</strong>
+                        <span>Subsystem degradation or elevated warning volume requiring monitoring.</span>
+                    </div>
+                    <div class="band-item band-warning">
+                        <strong>50 – 74: Warning</strong>
+                        <span>Significant error concentration or localized failures requiring intervention.</span>
+                    </div>
+                    <div class="band-item band-critical">
+                        <strong>0 – 49: Critical</strong>
+                        <span>Severe or cascading failures threatening service availability.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="formula-btn-dismiss">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Dashboard JavaScript -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

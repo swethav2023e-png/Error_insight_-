@@ -35,6 +35,8 @@ class Config:
     )
     SECRET_KEY = os.environ.get("SECRET_KEY", "loghealth-default-dev-secret-key-2026")
     API_KEY = os.environ.get("API_KEY", "dev-secret-key-12345")
+    LOGSCOPE_API_URL = os.environ.get("LOGSCOPE_API_URL", "https://log-scope-three.vercel.app")
+    LOGSCOPE_API_KEY = os.environ.get("LOGSCOPE_API_KEY", "")
     DATABASE_PATH = os.environ.get("DATABASE_PATH", DEFAULT_DB)
     MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))  # 16 MB
     JSON_SORT_KEYS = False
